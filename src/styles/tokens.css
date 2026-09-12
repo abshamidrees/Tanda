@@ -1,0 +1,132 @@
+/* Tanda design tokens
+   Rotating savings circles, a Nimiq Pay mini app.
+   Semantic rule: colour means position in the cycle.
+   gold = whose turn it is now. mint = done. coral = owed.
+   If a colour appears anywhere that is not a turn, a completion or a debt,
+   it is wrong. */
+
+@import "tailwindcss";
+
+@theme {
+  /* Ground and surfaces */
+  --color-ground:   #14101A;
+  --color-surface:  #1E1826;
+  --color-raised:   #2A2233;
+  --color-hairline: #3A3143;
+
+  /* Text */
+  --color-cream: #FFF6E8;
+  --color-muted: #A99DB5;
+
+  /* The three meanings. There is no fourth accent. */
+  --color-gold:  #F6B221;  /* Nimiq Pay's own theme colour. Matching is deliberate. */
+  --color-mint:  #4ADE9B;
+  --color-coral: #FF6B5A;
+
+  /* Tints, derived. Do not invent more. */
+  --color-gold-wash:  #2E2416;
+  --color-mint-wash:  #16281F;
+  --color-coral-wash: #2B1A18;
+
+  /* Type */
+  --font-ui:   "Mulish Variable", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+
+  /* Scale, phone-first */
+  --text-title:  1.5rem;
+  --text-pot:    2.5rem;
+  --text-card:   1.0625rem;
+  --text-body:   0.9375rem;
+  --text-label:  0.6875rem;
+
+  --tracking-title: -0.02em;
+  --tracking-pot:   -0.03em;
+  --tracking-label:  0.12em;
+
+  /* §4's type table. Weight, leading and tracking travel with each size, so a
+     role cannot be half-applied. Values are the brief's, not new ones. */
+  --text-title--font-weight:    800;
+  --text-title--line-height:    1.15;
+  --text-title--letter-spacing: -0.02em;
+  --text-pot--font-weight:      500;
+  --text-pot--line-height:      1;
+  --text-pot--letter-spacing:   -0.03em;
+  --text-card--font-weight:     600;
+  --text-card--line-height:     1.3;
+  --text-card--letter-spacing:  -0.01em;
+  --text-body--line-height:     1.55;
+  --text-label--line-height:    1.2;
+
+  /* Spacing, 4px base */
+  --spacing-1:  4px;
+  --spacing-2:  8px;
+  --spacing-3:  12px;
+  --spacing-4:  16px;
+  --spacing-5:  24px;
+  --spacing-6:  32px;
+  --spacing-7:  48px;
+
+  /* Row pitch. Rows are separated by a hairline with zero gap. */
+  --row-pitch: 64px;
+
+  /* Geometry */
+  --radius-card:  14px;
+  --radius-sheet: 20px;
+  --radius-chip:  999px;
+  --radius-field: 10px;
+
+  /* Motion. Five animations exist. This is the only curve. */
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-settle: 400ms;
+  --dur-sheet:  240ms;
+  --dur-press:  100ms;
+  --dur-toast:  180ms;
+  --dur-row:    160ms;
+}
+
+/* Component classes sit in a layer so utilities can refine them. Left
+   unlayered, they silently override every Tailwind utility on the element. */
+@layer components {
+  /* Every number in the product is mono with tabular figures. No exceptions. */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500; /* §4: every mono role in the type table is 500 */
+    letter-spacing: 0;
+  }
+
+  /* Uppercase mono label. Used for every eyebrow, stat label and state chip. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: var(--text-label);
+    font-weight: 500;
+    line-height: 1.2; /* §4 */
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* State chips. The only three states a member row can be in. */
+  .chip-paid        { color: var(--color-mint);  background: var(--color-mint-wash); }
+  .chip-outstanding { color: var(--color-coral); background: var(--color-coral-wash); }
+  .chip-notdue      { color: var(--color-muted); background: transparent; }
+
+  /* The member who is up. One gold left border, nothing else. */
+  .row-up { box-shadow: inset 2px 0 0 var(--color-gold); }
+}
+
+/* §7 bottom sheet: slide up, 240ms. Runs on mount, so no state or effect. */
+@keyframes sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* §7 toast: fade and rise 8px, 180ms. */
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-settle: 0ms;
+    --dur-sheet:  0ms;
+    --dur-press:  0ms;
+    --dur-toast:  0ms;
+    --dur-row:    0ms;
+  }
+}

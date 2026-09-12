@@ -1,0 +1,39 @@
+# ---- Secrets. Nothing in this block is ever committed. ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Private planning. On disk for tooling, never in git. ----
+docs/BRIEF.md
+docs/PLAYBOOK.md
+docs/DAY-ONE.md
+skills-lock.json
+CLAUDE.md
+refs/
+*-design/
+.agents/
+.claude/
+
+# ---- Node ----
+node_modules/
+dist/
+.vite/
+.pglite/
+*.tsbuildinfo
+
+# ---- Vercel / infra ----
+.vercel/
+.turbo/
+
+# ---- Editors / OS ----
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# ---- Media that bloats a clone ----
+*.mov
+*.mp4
+screenshots/

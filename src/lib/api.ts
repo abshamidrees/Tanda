@@ -1,5 +1,5 @@
 /**
- * Typed client for Tanda's own server. Knows nothing about wallets — that is
+ * Typed client for Tanda's own server. Knows nothing about wallets; that is
  * lib/nimiq.ts. The two meet in lib/pay.ts.
  */
 import { isSessionOpen } from './session'
@@ -125,7 +125,7 @@ export class ApiError extends Error {
 
 /**
  * Tanda received the request and refused it (4xx): replaying will not help.
- * Offline, no session and 5xx are not refusals — a stashed hash must survive them.
+ * Offline, no session and 5xx are not refusals: a stashed hash must survive them.
  */
 export function isRefusal(error: unknown): error is ApiError {
   return error instanceof ApiError && error.status >= 400 && error.status < 500
@@ -228,7 +228,7 @@ export const api = {
  *
  * There is a window between the wallet returning a hash and our server
  * accepting it. If the request fails in that window the money has moved and
- * Tanda does not know — the mirror image of the failure §8.6 warns about, and
+ * Tanda does not know: the mirror image of the failure §8.6 warns about, and
  * the more expensive one, because the payer cannot prove what they did.
  *
  * So the hash is written to this device before the server is told, and replayed

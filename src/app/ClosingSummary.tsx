@@ -87,7 +87,7 @@ type Phase = { kind: 'review' } | { kind: 'creating' } | { kind: 'failed' } | { 
 /**
  * "Pre-fills a new circle from this one" (§8.8). The terms carry over and are
  * shown the way §8.3 shows them before anyone commits; creating it hands back a
- * code for the same group. Nobody is added on their behalf — joining still
+ * code for the same group. Nobody is added on their behalf: joining still
  * reads each member's own wallet.
  */
 function RestartSheet({

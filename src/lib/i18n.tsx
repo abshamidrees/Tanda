@@ -2,7 +2,7 @@
  * Every word the user reads, in English and Spanish (§10).
  *
  * The language is Nimiq Pay's `window.nimiqPay.language`, read through
- * lib/nimiq.ts — never `navigator.language`. It is static for the session, so
+ * lib/nimiq.ts, never `navigator.language`. It is static for the session, so
  * it is resolved once at the root and handed down through context.
  *
  * Spanish matters here beyond coverage: *tanda* is the Latin American word for
@@ -20,8 +20,8 @@ export function resolveLang(code: string | null | undefined): Lang {
 }
 
 /**
- * The host sends a bare ISO 639-1 code. Plain `es` formats the Spain way —
- * measured: 3000 renders "3000" and 60000 renders "60.000" — while `es-419`
+ * The host sends a bare ISO 639-1 code. Plain `es` formats the Spain way
+ * (measured: 3000 renders "3000" and 60000 renders "60.000"), while `es-419`
  * gives "3,000" and "60,000", which is what the Latin American users §10 is
  * written for expect.
  */
@@ -68,6 +68,8 @@ const en = ({ n, nim }: Format) => ({
   /** Stat strip values, sized for a third of a phone's width. */
   dueShort: (days: number) =>
     days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'today' : days === 1 ? 'in 1 day' : `in ${days} days`,
+  /** The stat strip's due date while seats are still open. */
+  dueWhenFull: 'when full',
 
   chip: { paid: 'paid', sent: 'sent', outstanding: 'outstanding', 'not due': 'not due' },
   sentWaiting: 'sent, waiting for confirmation',
@@ -104,7 +106,7 @@ const en = ({ n, nim }: Format) => ({
     allIn: 'Every share is in. The round settles and the turn moves on.',
     waiting: (count: number) => (
       <>
-        Waiting on {n(count)} {plural(count, 'member', 'members')}. Confirming is yours alone —
+        Waiting on {n(count)} {plural(count, 'member', 'members')}. Only you can confirm:
         nobody can mark their own payment received.
       </>
     ),
@@ -323,6 +325,7 @@ const es = ({ n, nim }: Format): Messages => ({
   roundOf: (round: number, total: number) => `Ronda ${round} de ${total}`,
   dueShort: (days: number) =>
     days < 0 ? `${Math.abs(days)} d tarde` : days === 0 ? 'hoy' : days === 1 ? 'en 1 día' : `en ${days} días`,
+  dueWhenFull: 'al llenarse',
 
   chip: { paid: 'pagado', sent: 'enviado', outstanding: 'pendiente', 'not due': 'no debe' },
   sentWaiting: 'enviado, esperando confirmación',

@@ -1,7 +1,7 @@
 /**
  * Chain verification.
  *
- * The Nimiq provider has no transaction-history method — established in
+ * The Nimiq provider has no transaction-history method, established in
  * docs/DAY-ONE.md against the shipped SDK and the official reference. So
  * verification runs here, server-side, against a public indexer. Doing it on
  * the server rather than in the WebView keeps it from being a claim the client
@@ -94,7 +94,7 @@ export async function verifyTransfer(params: {
     tx = (await response.json()) as IndexedTx
   } catch {
     // Indexer down, slow or rate-limiting. Not the payer's fault and not a
-    // failed payment — the share simply stays unverified and the receiver
+    // failed payment: the share simply stays unverified and the receiver
     // confirms it by hand.
     return { verified: false, reason: 'unreachable' }
   }

@@ -1,5 +1,5 @@
 /**
- * §7 Button. Gold is the primary fill — §4 allows gold for whose turn it is
+ * §7 Button. Gold is the primary fill: §4 allows gold for whose turn it is
  * and for primary buttons, nothing else. Press is the only animation: scale to
  * 0.97 over 100ms on the one curve.
  */

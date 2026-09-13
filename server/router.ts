@@ -1,13 +1,15 @@
 /**
- * The whole API. Three routes: create a circle, join by code, read a circle.
+ * The whole API: create a circle, join by code, read circles, record a payment,
+ * find a payment Tanda was never told about, confirm receipt, and the device's
+ * first-open flag (§8.1).
  *
  * Written against the Web Request/Response types so the same handler runs under
  * the Vite dev middleware and as a Vercel function, with no adapter per route.
  *
  * Identity is the Nimiq Pay device identifier (§10), sent as `x-tanda-device`.
- * It is a handle, not authentication — it says which seat you occupy, and it
- * never authorises anything that moves money. Payment routes, when they land,
- * need the wallet signature instead.
+ * It is a handle, not authentication: it says which seat you occupy. It never
+ * moves money. Every payment goes wallet to wallet inside Nimiq Pay, and the
+ * member receiving it confirms it (§9).
  */
 import { z } from 'zod'
 import {

@@ -1,6 +1,6 @@
 /**
- * Circle operations. No payment logic here yet — recording a transaction hash
- * and confirming receipt (§8.6, §8.7) land in a later phase.
+ * Circle operations: create, join and read, and both sides of a payment,
+ * recording its hash and confirming it arrived (§8.6, §8.7).
  */
 import { and, asc, eq, ne } from 'drizzle-orm'
 import { db, schema } from './db/client.js'
@@ -530,7 +530,7 @@ async function loadShare(conn: Db, code: string, shareId: string) {
 
 /**
  * The payer records the transaction hash (§9), after the wallet has returned
- * one. Nothing reaches this function on a cancelled send — the client never
+ * one. Nothing reaches this function on a cancelled send: the client never
  * calls it, because the SDK surfaces a cancellation instead of a hash. That is
  * what keeps a row from ever claiming a payment that did not happen.
  */
@@ -611,7 +611,7 @@ export async function findSent(input: { code: string; shareId: string; deviceId:
 
 /**
  * The receiver confirms the money arrived (§9). Only they can, and only for a
- * share the payer has already claimed to have sent — neither side can act for
+ * share the payer has already claimed to have sent. Neither side can act for
  * the other, which is the whole mechanism.
  */
 export async function confirmReceived(input: {

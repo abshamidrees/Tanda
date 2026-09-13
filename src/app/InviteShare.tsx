@@ -3,7 +3,7 @@
  *
  * The code is the part that has to survive. It goes out as plain text inside
  * every share, because Nimiq documents the deeplink format but not whether a
- * `?join=` parameter reaches the mini app — so a member can always type it.
+ * `?join=` parameter reaches the mini app, so a member can always type it.
  * The native share sheet is used where the WebView has one; otherwise the same
  * message is copied.
  */

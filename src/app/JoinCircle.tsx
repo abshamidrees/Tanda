@@ -3,7 +3,7 @@
  *
  * One field for the code, or pre-filled from the deeplink's `?join=`. Then the
  * full terms before anyone commits: name, share, frequency, members, the whole
- * rotation order, and the seat this member would take — because when their
+ * rotation order, and the seat this member would take, because when their
  * turn comes is the entire reason they are joining.
  *
  * A forming circle has no start date yet: round 1 opens the moment the last

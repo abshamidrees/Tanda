@@ -5,7 +5,7 @@
  * could check itself carries `verified on chain`.
  *
  * Every sent share still needs the receiver's tap, verified or not (§8.7).
- * Verification never confirms on the receiver's behalf — the chain proves a
+ * Verification never confirms on the receiver's behalf. The chain proves a
  * transfer happened, only the receiver can say it counted. That two-sided
  * sign-off is §9's mechanism and the product's actual claim.
  */
@@ -66,7 +66,7 @@ export function ConfirmReceived({
 
       <div className="mt-2 rounded-[var(--radius-card)] bg-surface divide-y divide-hairline overflow-hidden">
         {incoming.map((share) => (
-          // §5 row: title, subtitle under it, state on the right — two lines, not three.
+          // §5 row: title, subtitle under it, state on the right. Two lines, not three.
           <div key={share.id} className="flex items-center gap-3 px-4 py-3 min-h-[var(--row-pitch)]">
             <div className="min-w-0 flex-1">
               <p className="text-card text-cream truncate">{share.payer?.displayName}</p>

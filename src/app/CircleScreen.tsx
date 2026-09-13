@@ -99,7 +99,7 @@ export function CircleScreen({ code, deviceId }: { code: string; deviceId: strin
                   value: round ? `${round.number} / ${round.totalRounds}` : t.word.forming,
                 },
                 { label: t.word.pot, value: `${format.plain(circle.potNim)} ${circle.currency}` },
-                { label: t.word.due, value: days === null ? '—' : t.dueShort(days) },
+                { label: t.word.due, value: days === null ? t.dueWhenFull : t.dueShort(days) },
               ]}
             />
           </div>

@@ -1,17 +1,17 @@
 /**
  * Who this device is.
  *
- * Inside Nimiq Pay that is `requestDeviceIdentifier()` — pseudonymous, scoped
+ * Inside Nimiq Pay that is `requestDeviceIdentifier()`: pseudonymous, scoped
  * to our origin, stable across reinstalls (§10). It identifies a device, not a
  * person, and it never authorises anything that moves money.
  *
  * Production never invents one. No identity from the host means no session,
- * and no session means no request (lib/session.ts) — so a browser that is not
+ * and no session means no request (lib/session.ts), so a browser that is not
  * Nimiq Pay has nothing to fetch for and shows only the "open in Nimiq Pay"
  * card.
  *
  * In development only, `?as=amara` selects a seeded member so the two-sided
- * flow in §8.6/§8.7 can be driven from a desktop browser — you need two
+ * flow in §8.6/§8.7 can be driven from a desktop browser. You need two
  * identities to exercise it, and one phone only gives you one.
  */
 import { listAccounts, deviceId as requestDeviceId } from './nimiq'
@@ -94,7 +94,7 @@ export function devIdentity(): string {
     const stored = localStorage.getItem(KEY)
     if (stored) return stored
     // crypto.randomUUID() is unavailable over plain HTTP, which is how Nimiq
-    // Pay loads a local mini app — so never reach for it here (docs/DAY-ONE.md).
+    // Pay loads a local mini app, so never reach for it here (docs/DAY-ONE.md).
     const generated = Array.from({ length: 64 }, () =>
       Math.floor(Math.random() * 16).toString(16),
     ).join('')

@@ -1,5 +1,5 @@
 /**
- * Dev-only component lab. Not shipped, not part of the component budget —
+ * Dev-only component lab. Not shipped, not part of the component budget:
  * it exists so each piece can be looked at in isolation at phone width.
  * Open with ?lab=1
  */

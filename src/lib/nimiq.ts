@@ -44,7 +44,7 @@ export type ProviderState =
 
 /**
  * The SDK's ErrorResponse is a plain object with an `error` key, returned in
- * the RESOLVE path — not thrown. Any call that forgets to narrow will happily
+ * the RESOLVE path, not thrown. Any call that forgets to narrow will happily
  * treat `{error:{...}}` as a tx hash, so nothing calls the provider directly.
  *
  * Any `error` key counts, whatever is inside it. The .d.ts promises
@@ -100,7 +100,7 @@ let pending: Promise<ProviderState> | null = null
 /**
  * Connect to the host provider. Never throws: callers get a discriminated
  * state so the desktop fallback card and the in-Pay app share one code path.
- * Memoised — repeated calls reuse the first attempt.
+ * Memoised: repeated calls reuse the first attempt.
  */
 export function connect(timeout = 10_000): Promise<ProviderState> {
   pending ??= init({ timeout }).then(
@@ -124,7 +124,7 @@ export function reconnect(timeout?: number): Promise<ProviderState> {
 
 /**
  * Nimiq Pay seeds `window.nimiqPay` before any page script runs, so this is a
- * synchronous answer to "are we inside Nimiq Pay" — no ten-second wait on
+ * synchronous answer to "are we inside Nimiq Pay", with no ten-second wait on
  * init() to find out a desktop visitor is on a desktop.
  */
 export function isInsideNimiqPay(): boolean {
@@ -199,113 +199,4 @@ export function hostLanguage(): string | undefined {
 /** Pseudonymous, per-origin, per-device id. Prompts once per origin. */
 export function deviceId(reason: string): Promise<string> {
   return requestDeviceIdentifier({ reason })
-}
-
-/** Diagnostics for the day-one probe screen. Never throws. */
-export async function probe() {
-  const started = performance.now()
-  const state = await connect()
-  const elapsed = Math.round(performance.now() - started)
-
-  if (state.status === 'absent') {
-    return { ok: false as const, elapsed, reason: state.reason, language: getHostLanguage() }
-  }
-
-  const settled = await Promise.allSettled([
-    state.provider.isConsensusEstablished(),
-    state.provider.getBlockNumber(),
-  ])
-  const [consensus, height] = settled
-
-  return {
-    ok: true as const,
-    elapsed,
-    language: getHostLanguage(),
-    network: state.provider.getNetwork(),
-    consensus: consensus.status === 'fulfilled' ? consensus.value : consensus.reason?.message,
-    height: height.status === 'fulfilled' ? height.value : height.reason?.message,
-    /** undefined means the host injected no RPC URL, so provider.request() to
-     *  any non-wallet method will throw. This is the on-device answer to
-     *  "can the mini app read history through the provider". */
-    rpc: state.provider.getRPC() === undefined ? null : 'configured',
-    methods: Object.getOwnPropertyNames(Object.getPrototypeOf(state.provider))
-      .filter((k) => k !== 'constructor')
-      .sort(),
-  }
-}
-
-/* ------------------------------------------------------------------------- *
- * Phone test only (app/PhoneTest.tsx, opened with ?probe).
- *
- * These call the provider WITHOUT unwrap() and report exactly what came back,
- * resolve or reject, so the real shape of a cancel, a success and a refusal can
- * be read off a device instead of guessed. Never use them in product code: they
- * deliberately skip the narrowing that stops a cancelled payment reading as sent.
- * ------------------------------------------------------------------------- */
-
-export type RawCall =
-  | { method: 'listAccounts' }
-  | { method: 'sendBasicTransaction'; recipient: string; value: number }
-  | { method: 'sendBasicTransactionWithData'; recipient: string; value: number; data: string }
-  | { method: 'request:getBlockNumber' }
-
-export type RawOutcome =
-  | { settled: 'no-provider'; ms: number; reason: string }
-  | { settled: 'resolved'; ms: number; value: unknown }
-  | { settled: 'rejected'; ms: number; error: unknown }
-
-export async function rawCall(call: RawCall): Promise<RawOutcome> {
-  const started = performance.now()
-  const ms = () => Math.round(performance.now() - started)
-  const state = await connect()
-  if (state.status === 'absent') return { settled: 'no-provider', ms: ms(), reason: state.reason }
-
-  const provider = state.provider
-  try {
-    const value =
-      call.method === 'listAccounts'
-        ? await provider.listAccounts()
-        : call.method === 'sendBasicTransaction'
-          ? await provider.sendBasicTransaction({ recipient: call.recipient, value: call.value })
-          : call.method === 'sendBasicTransactionWithData'
-            ? await provider.sendBasicTransactionWithData({
-                recipient: call.recipient,
-                value: call.value,
-                data: call.data,
-              })
-            : await provider.request({ method: 'getBlockNumber' })
-    return { settled: 'resolved', ms: ms(), value }
-  } catch (error) {
-    return { settled: 'rejected', ms: ms(), error }
-  }
-}
-
-/** What the host injected, read without calling anything that prompts. */
-export async function hostReport() {
-  const started = performance.now()
-  const state = await reconnect(60_000)
-  const initMs = Math.round(performance.now() - started)
-  if (state.status === 'absent') {
-    return { init: 'rejected', initMs, reason: state.reason, language: getHostLanguage() ?? null }
-  }
-  const provider = state.provider
-  const settle = async <T,>(fn: () => Promise<T>) => {
-    try {
-      return { resolved: await fn() }
-    } catch (error) {
-      return { rejected: error instanceof Error ? error.message : String(error) }
-    }
-  }
-  const rpc = provider.getRPC()
-  return {
-    init: 'resolved',
-    initMs,
-    language: getHostLanguage() ?? null,
-    network: provider.getNetwork(),
-    consensus: await settle(() => provider.isConsensusEstablished()),
-    blockNumber: await settle(() => provider.getBlockNumber()),
-    rpcInjected: rpc !== undefined,
-    rpc: rpc === undefined ? null : Object.prototype.toString.call(rpc),
-    hostContextKeys: window.nimiqPay ? Object.keys(window.nimiqPay) : null,
-  }
 }

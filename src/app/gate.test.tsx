@@ -5,7 +5,7 @@
  * replaced by a spy that fails every call, the way production does while the
  * database is down. What is under test is not only what shows, but that
  * nothing is fetched until the gate has resolved inside Nimiq Pay with an
- * identity the host issued — because a request that is never sent cannot
+ * identity the host issued, because a request that is never sent cannot
  * render its error over the gate.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'

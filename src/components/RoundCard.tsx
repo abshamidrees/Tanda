@@ -2,7 +2,7 @@
  * §8.2 the home card. One per circle: a 40px ring on the left, then the circle
  * name, the round, the pot, and one state line. Tapping it opens the circle.
  *
- * At 40px the ring drops its centre content (§6) — only the arcs read, and
+ * At 40px the ring drops its centre content (§6). Only the arcs read, and
  * that is enough to see whose turn it is without opening anything.
  */
 import type { ReactNode } from 'react'

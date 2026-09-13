@@ -2,7 +2,7 @@
  * One schema, two drivers.
  *
  * Production uses DATABASE_URL over postgres-js (Neon, per §3). Local dev uses
- * PGlite — real Postgres compiled to WASM, running in-process — so the server
+ * PGlite (real Postgres compiled to WASM, running in-process), so the server
  * and the seed run with no account, no Docker and no network. Identical SQL,
  * so nothing about the schema is dev-only.
  */
@@ -68,7 +68,7 @@ export async function db(): Promise<Db> {
   return (await connection()).db
 }
 
-/** Apply pending migrations. Idempotent — safe on every boot. */
+/** Apply pending migrations. Idempotent, so safe on every boot. */
 export async function migrateToLatest(): Promise<'postgres' | 'pglite'> {
   const conn = await connection()
   await conn.migrate()

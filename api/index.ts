@@ -4,7 +4,7 @@
  * server/router.ts stays the single source of routing for dev and production.
  *
  * Vercel treats a default-exported *function* as a Node (req, res) handler, so
- * the Web Request/Response signature must be this `fetch` object form — a plain
+ * the Web Request/Response signature must be this `fetch` object form. A plain
  * `export default function (request: Request)` would receive an IncomingMessage
  * and fail on every request.
  */

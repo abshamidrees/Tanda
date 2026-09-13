@@ -5,7 +5,6 @@ import { CreateCircle } from './CreateCircle'
 import { Home } from './Home'
 import { JoinCircle } from './JoinCircle'
 import { Lab } from './Lab'
-import { PhoneTest } from './PhoneTest'
 import { ConnectingToWallet, OutsideNimiqPay, WaitingForNetwork } from './states'
 import { devBypass, devIdentity, hostIdentity, impersonating, seedNames } from '../lib/identity'
 import { I18nProvider } from '../lib/I18nProvider'
@@ -28,8 +27,6 @@ const code = params.get('code')?.toUpperCase() ?? null
 const route = params.has('create') ? 'create' : params.has('join') ? 'join' : code ? 'circle' : 'home'
 const joinCode = params.get('join') || null
 const showLab = import.meta.env.DEV && params.has('lab')
-/** The close-out's phone test. Outside the gate on purpose: it has to report a failing init() too. */
-const showProbe = params.has('probe')
 const lang = sessionLang()
 
 /** §11: "Connecting to your wallet, with a retry after 8 seconds". */
@@ -65,7 +62,7 @@ function firstGate(): Gate {
 
 export function App() {
   return (
-    <I18nProvider lang={lang}>{showLab ? <Lab /> : showProbe ? <PhoneTest /> : <Gated />}</I18nProvider>
+    <I18nProvider lang={lang}>{showLab ? <Lab /> : <Gated />}</I18nProvider>
   )
 }
 
@@ -75,7 +72,7 @@ export function App() {
  * Outside Nimiq Pay the "open in Nimiq Pay" card is the entire app. Inside it:
  * "connecting" until the provider arrives, "waiting for the network" until
  * consensus, then the host issues an identity. Only then does the session open
- * (lib/session.ts), and only an open session can send a request — so no screen
+ * (lib/session.ts), and only an open session can send a request, so no screen
  * behind the gate can fetch, fail, or render an error in front of it.
  */
 function Gated() {
@@ -179,8 +176,8 @@ function Gated() {
 
 /**
  * Dev only. The two-sided flow needs two people, and a desktop browser gives
- * you one — this swaps which seeded member you are so paying and confirming
- * can both be driven. Goes away with §8.1 onboarding.
+ * you one. This swaps which seeded member you are, so paying and confirming
+ * can both be driven.
  */
 function IdentitySwitcher() {
   if (!import.meta.env.DEV) return null

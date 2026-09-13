@@ -1,5 +1,5 @@
 /**
- * Tanda schema. Columns are exactly those named in docs/BRIEF.md §9 — the
+ * Tanda schema. Columns are exactly those named in docs/BRIEF.md §9: the
  * brief's vocabulary rule (§0) applies to database columns, so no renaming.
  *
  * Money is stored in Luna (1 NIM = 100_000 Luna) as bigint. Never a float:
@@ -106,7 +106,7 @@ export const shares = pgTable(
     /**
      * ADDITION to the §9 column list. §3 told us to find out whether chain reads
      * were possible before designing, and §8.7 says to show `verified on chain`
-     * next to any share the app could confirm itself — which needs somewhere to
+     * next to any share the app could confirm itself, which needs somewhere to
      * record that. Set when the indexer confirms the hash really moved this
      * amount from this payer to this recipient. Never a substitute for
      * `confirmed_at`: the receiver still signs off, because the chain proves a

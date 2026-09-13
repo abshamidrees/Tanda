@@ -1,5 +1,5 @@
 /**
- * Circle rules. Pure functions, no database — so the rotation is testable and
+ * Circle rules. Pure functions, no database, so the rotation is testable and
  * the API layer stays thin.
  */
 import { randomInt } from 'node:crypto'
@@ -44,7 +44,7 @@ export function paymentMemo(roundNumber: number, shareId: string): string {
 /**
  * The pot is every member's share for the round.
  *
- * NOTE — the brief states this three times (§0, §8.3): pot = members × share,
+ * NOTE: the brief states this three times (§0, §8.3): pot = members × share,
  * so six members at 500 NIM make a 3,000 NIM pot and each member pays
  * 6 × 500 = 3,000 across the circle. But §8.5 says the member who is up sees
  * what they will receive instead of a Pay button, and §8.5 lists a `not due`

@@ -49,7 +49,7 @@ function apiDev(): Plugin {
   }
 }
 
-// host:true is required — the phone loads this over the LAN, never localhost.
+// host:true is required: the phone loads this over the LAN, never localhost.
 export default defineConfig({
   plugins: [react(), tailwindcss(), apiDev()],
   server: { host: true, port: 5173 },

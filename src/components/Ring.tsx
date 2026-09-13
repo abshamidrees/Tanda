@@ -90,7 +90,7 @@ function centreFits(frame: HTMLElement, lines: HTMLElement) {
 
 /**
  * Every property that changes on settle must be interpolable, or it snaps.
- * `fill: none` cannot fade into gold — measured: the incoming segment went gold
+ * `fill: none` cannot fade into gold. Measured: the incoming segment went gold
  * at 0ms, ignoring both the 400ms and the 120ms delay, so for a moment two
  * segments were gold at once. So nothing here is ever `none`: a future segment
  * holds its gold at zero opacity and fades it in, and its hairline fades out.

@@ -141,7 +141,7 @@ export function CircleFull({ memberCount, backHref }: { memberCount: number; bac
  * makes sense where a payment is in flight. So context is required, and every
  * call site has to say which it is:
  *
- *   general  anywhere else — home, a circle, creating a circle. A neutral line.
+ *   general  anywhere else: home, a circle, creating a circle. A neutral line.
  *   payment  inside the pay sheet only, where §11's line is true and relevant.
  *
  * With `recordedHash`, money already moved and only Tanda's record is missing:
@@ -177,7 +177,7 @@ export function CouldNotReach(
 }
 
 /**
- * 9. Already paid this round. This replaces the pay button outright — never a
+ * 9. Already paid this round. This replaces the pay button outright, never a
  * disabled button left sitting there saying nothing (§11).
  */
 export function AlreadyPaid({

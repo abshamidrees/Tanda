@@ -47,7 +47,7 @@ export const members = pgTable(
     circleId: uuid('circle_id')
       .notNull()
       .references(() => circles.id, { onDelete: 'cascade' }),
-    /** 1-based seat in the rotation. Fixed at join, never drawn by lot (§2). */
+    /** 1-based seat in the rotation. Fixed at join, never assigned at random (§2). */
     position: integer('position').notNull(),
     displayName: text('display_name').notNull(),
     address: text('address').notNull(),

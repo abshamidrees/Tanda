@@ -3,6 +3,7 @@
  */
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { PRESS_STYLE, buttonClass } from '../components/buttonClass'
 import { EmptyState } from '../components/EmptyState'
 import { Ring } from '../components/Ring'
 import { RoundCard, type CircleState } from '../components/RoundCard'
@@ -84,8 +85,8 @@ export function Home({ deviceId }: { deviceId: string }) {
         visual={<Ring total={6} current={0} size={120} />}
         title={t.home.emptyTitle}
         line={t.home.emptyLine}
-        action={{ label: t.home.start }}
-        secondary={{ label: t.home.join }}
+        action={{ label: t.home.start, href: link({ create: '' }) }}
+        secondary={{ label: t.home.join, href: link({ join: '' }) }}
       />
     )
   }
@@ -116,6 +117,15 @@ export function Home({ deviceId }: { deviceId: string }) {
             </div>
           )
         })}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mt-5">
+        <a href={link({ create: '' })} className={buttonClass({ variant: 'secondary' })} style={PRESS_STYLE}>
+          <span className="text-balance">{t.home.start}</span>
+        </a>
+        <a href={link({ join: '' })} className={buttonClass({ variant: 'secondary' })} style={PRESS_STYLE}>
+          <span className="text-balance">{t.home.join}</span>
+        </a>
       </div>
     </Shell>
   )

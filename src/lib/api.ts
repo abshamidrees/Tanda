@@ -59,8 +59,17 @@ export interface CircleView {
     position: number
     displayName: string
     address: string
-    /** Luna and NIM, from confirmed records (§8.8). */
-    totals: { paid: number; paidNim: number; received: number; receivedNim: number }
+    /** Luna and NIM, from confirmed records, split the way the wallet saw it (§8.8). */
+    totals: {
+      sent: number
+      sentNim: number
+      ownShare: number
+      ownShareNim: number
+      contributed: number
+      contributedNim: number
+      received: number
+      receivedNim: number
+    }
   } | null
   members: MemberRow[]
   round: {
@@ -173,6 +182,14 @@ export const api = {
     },
     deviceId: string,
   ) => request<CircleView>('/api/circles', { method: 'POST', body: JSON.stringify(input), deviceId }),
+
+  /** §8.4. Joining takes the next seat; the last seat starts the circle. */
+  joinCircle: (code: string, input: { displayName: string; address: string }, deviceId: string) =>
+    request<CircleView>(`/api/circles/${encodeURIComponent(code)}/join`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+      deviceId,
+    }),
 
   /** Every circle this device holds a seat in (§8.2). */
   listCircles: (deviceId: string) => request<CircleView[]>('/api/circles', { deviceId }),

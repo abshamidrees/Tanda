@@ -206,28 +206,47 @@ export async function joinCircle(input: {
 }
 
 /**
- * What a member has put in and taken out, counted from confirmed records.
+ * What a member has put in and taken out, counted from confirmed records, and
+ * split the way their wallet saw it.
  *
- * Paid includes the member's own share in the round they were up — settled at
- * round open, never sent to themselves — because that is how the pot reaches
- * members x share and how §8.3 promises "pays 3,000 NIM, receives 3,000 NIM".
- * Their wallet shows one fewer outgoing payment than this counts.
+ *   sent         shares that actually left their wallet
+ *   ownShare     their share in the round they were up: settled at round open
+ *                against their own pot, never sent to themselves
+ *   contributed  sent + ownShare, which is what makes the pot members x share
+ *   received     the pots of rounds they were up in, once settled
+ *
+ * §8.8 shows all four, so no figure on the closing screen disagrees with the
+ * wallet: "sent" matches the wallet, and the difference is named.
  */
 function totalsFor(
   memberId: string,
   allRounds: { status: string; recipientMemberId: string; shares: { payerMemberId: string; amount: number; confirmedAt: Date | null }[] }[],
 ) {
-  const paid = allRounds
-    .flatMap((round) => round.shares)
-    .filter((share) => share.payerMemberId === memberId && share.confirmedAt)
-    .reduce((sum, share) => sum + share.amount, 0)
+  const confirmedFrom = (rounds: typeof allRounds) =>
+    rounds
+      .flatMap((round) => round.shares)
+      .filter((share) => share.payerMemberId === memberId && share.confirmedAt)
+      .reduce((sum, share) => sum + share.amount, 0)
+
+  const contributed = confirmedFrom(allRounds)
+  const ownShare = confirmedFrom(allRounds.filter((round) => round.recipientMemberId === memberId))
+  const sent = contributed - ownShare
 
   const received = allRounds
     .filter((round) => round.status === 'settled' && round.recipientMemberId === memberId)
     .flatMap((round) => round.shares)
     .reduce((sum, share) => sum + share.amount, 0)
 
-  return { paid, paidNim: lunaToNim(paid), received, receivedNim: lunaToNim(received) }
+  return {
+    sent,
+    sentNim: lunaToNim(sent),
+    ownShare,
+    ownShareNim: lunaToNim(ownShare),
+    contributed,
+    contributedNim: lunaToNim(contributed),
+    received,
+    receivedNim: lunaToNim(received),
+  }
 }
 
 export async function readCircle(rawCode: string, deviceId: string | null) {

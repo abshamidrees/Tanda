@@ -1,31 +1,32 @@
 /**
  * §8.8 Closing summary. When the last round settles: the full ring in mint,
- * what you paid, what you received, "Everyone is square.", and a way to go
- * again with the same group.
+ * the member's figures, "Everyone is square.", and a way to go again with the
+ * same group.
+ *
+ * The figures are told the way the wallet saw them. "You sent" matches the
+ * wallet's outgoing payments; the member's own share never left it, because it
+ * settled against their own pot, so it is named rather than folded in. In a
+ * product whose claim is an accurate record, no number here may disagree with
+ * the wallet.
  *
  * Not optional: completeness is scored, and a product that cannot end reads as
  * a prototype.
  */
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '../components/Button'
-import { PRESS_STYLE, buttonClass } from '../components/buttonClass'
 import { Ring } from '../components/Ring'
 import { Sheet } from '../components/Sheet'
-import { StatStrip } from '../components/StatStrip'
-import { Toast } from '../components/Toast'
-import { useToast } from '../lib/useToast'
 import { CouldNotReach } from './states'
+import { InviteShare } from './InviteShare'
 import { api, type CircleView } from '../lib/api'
-import { copyText } from '../lib/clipboard'
 import { useI18n } from '../lib/i18n'
-import { link } from '../lib/identity'
-import { breakableUrl, deeplink } from '../lib/links'
 
 export function ClosingSummary({ view, deviceId }: { view: CircleView; deviceId: string }) {
   const { t, format } = useI18n()
   const [restarting, setRestarting] = useState(false)
   const { circle, you } = view
+  const nim = (value: number) => `${format.plain(value)} ${circle.currency}`
 
   return (
     <>
@@ -41,15 +42,16 @@ export function ClosingSummary({ view, deviceId }: { view: CircleView; deviceId:
       </div>
 
       {you && (
-        <StatStrip
-          stats={[
-            { label: t.closing.youPaid, value: `${format.plain(you.totals.paidNim)} ${circle.currency}` },
-            {
-              label: t.closing.youReceived,
-              value: `${format.plain(you.totals.receivedNim)} ${circle.currency}`,
-            },
-          ]}
-        />
+        <div className="rounded-[var(--radius-card)] bg-surface divide-y divide-hairline overflow-hidden">
+          <Figure label={t.closing.youSent} value={nim(you.totals.sentNim)} />
+          <Figure
+            label={t.closing.ownShare}
+            note={t.closing.ownShareNote}
+            value={nim(you.totals.ownShareNim)}
+          />
+          <Figure label={t.closing.youContributed} value={nim(you.totals.contributedNim)} />
+          <Figure label={t.closing.youReceived} value={nim(you.totals.receivedNim)} />
+        </div>
       )}
 
       <p className="text-title tracking-title text-mint text-center mt-6">{t.closing.square}</p>
@@ -68,11 +70,20 @@ export function ClosingSummary({ view, deviceId }: { view: CircleView; deviceId:
   )
 }
 
-type Phase =
-  | { kind: 'review' }
-  | { kind: 'creating' }
-  | { kind: 'failed' }
-  | { kind: 'created'; code: string }
+/** One §5 row: label on the left, the amount right-aligned in mono. */
+function Figure({ label, note, value }: { label: string; note?: ReactNode; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 min-h-[var(--row-pitch)]">
+      <div className="min-w-0">
+        <p className="text-body text-cream">{label}</p>
+        {note && <p className="text-body text-muted">{note}</p>}
+      </div>
+      <span className="num text-body text-cream shrink-0">{value}</span>
+    </div>
+  )
+}
+
+type Phase = { kind: 'review' } | { kind: 'creating' } | { kind: 'failed' } | { kind: 'created'; code: string }
 
 /**
  * "Pre-fills a new circle from this one" (§8.8). The terms carry over and are
@@ -91,7 +102,6 @@ function RestartSheet({
 }) {
   const { t } = useI18n()
   const qc = useQueryClient()
-  const toast = useToast()
   const [phase, setPhase] = useState<Phase>({ kind: 'review' })
   const { circle, you } = view
   if (!you) return null
@@ -117,38 +127,16 @@ function RestartSheet({
     }
   }
 
-  const invite = phase.kind === 'created' ? deeplink({ join: phase.code }) : ''
-
   return (
     <Sheet open onClose={onClose} title={t.closing.sheetTitle}>
       <div className="px-4 pt-2 pb-4">
-        <h2 className="text-title tracking-title">{t.closing.sheetTitle}</h2>
+        <h2 className="text-title tracking-title mb-4">{t.closing.sheetTitle}</h2>
 
         {phase.kind === 'created' ? (
-          <>
-            <p className="label mt-5">{t.closing.shareCode}</p>
-            <p className="num text-pot tracking-pot text-cream mt-2">{phase.code}</p>
-            <p className="num text-body text-muted mt-2 break-words">{breakableUrl(invite)}</p>
-            <Button
-              full
-              className="mt-5"
-              onClick={async () => {
-                if (await copyText(invite)) toast.show(t.copied)
-              }}
-            >
-              {t.closing.copyInvite}
-            </Button>
-            <a
-              href={link({ code: phase.code })}
-              className={`${buttonClass({ variant: 'secondary', full: true })} mt-3`}
-              style={PRESS_STYLE}
-            >
-              <span className="text-balance">{t.closing.openNew}</span>
-            </a>
-          </>
+          <InviteShare name={circle.name} code={phase.code} />
         ) : (
           <>
-            <p className="text-body text-muted mt-1">
+            <p className="text-body text-muted">
               {t.closing.terms(circle.name, circle.memberCount, t.word[circle.frequency])}
             </p>
             <div className="mt-4 rounded-[var(--radius-card)] bg-raised px-4 py-3 text-body">
@@ -171,7 +159,6 @@ function RestartSheet({
           </>
         )}
       </div>
-      <Toast message={toast.message} id={toast.key} />
     </Sheet>
   )
 }

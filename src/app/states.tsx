@@ -226,7 +226,7 @@ export function AlreadyPaid({
 }
 
 /**
- * The deeplink as a scannable code, drawn from the raw module grid in the
+ * The deeplink as a scannable code, built from the raw module grid in the
  * palette. Hidden from assistive tech: the same link is printed beside it.
  */
 function QrCode({ value }: { value: string }) {

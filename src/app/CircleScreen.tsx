@@ -11,6 +11,7 @@ import { Ring } from '../components/Ring'
 import { StatStrip } from '../components/StatStrip'
 import { ClosingSummary } from './ClosingSummary'
 import { ConfirmReceived } from './ConfirmReceived'
+import { InviteShare } from './InviteShare'
 import { PaySheet } from './PaySheet'
 import { AlreadyPaid, CodeNotFound, CouldNotReach } from './states'
 import { ApiError, api, flushUnreported, unreportedFor, type CircleView } from '../lib/api'
@@ -30,6 +31,11 @@ export function CircleScreen({ code, deviceId }: { code: string; deviceId: strin
     queryKey: key,
     queryFn: () => api.readCircle(code, deviceId),
     retry: (count, err) => !(err instanceof ApiError && CODE_ERRORS.has(err.code)) && count < 1,
+    // Other members move this screen: someone takes the last seat, pays, confirms.
+    // Found in the walkthrough: a member waiting on a forming circle saw nothing
+    // change until they left and came back. Poll while it is open and on screen;
+    // a closed circle never changes, and a hidden tab does not poll.
+    refetchInterval: (query) => (query.state.data && query.state.data.circle.status !== 'closed' ? 8_000 : false),
   })
 
   const [paying, setPaying] = useState(false)
@@ -70,6 +76,7 @@ export function CircleScreen({ code, deviceId }: { code: string; deviceId: strin
   const mine = round?.shares.find((s) => s.isMine) ?? null
   const owes = mine?.state === 'outstanding' && !round?.youAreUp
   const days = round ? Math.ceil((new Date(round.dueAt).getTime() - now) / DAY_MS) : null
+  const overdue = round ? now > new Date(round.dueAt).getTime() : false
 
   return (
     <Shell>
@@ -108,6 +115,15 @@ export function CircleScreen({ code, deviceId }: { code: string; deviceId: strin
             />
           </div>
 
+          {!round && circle.status === 'forming' && (
+            // Until the last seat fills there is no round, only an invite to pass on.
+            <section className="rounded-[var(--radius-card)] bg-raised p-4">
+              <p className="label">{t.word.forming}</p>
+              <p className="text-card text-cream mt-1 mb-4">{t.home.waiting(circle.seatsRemaining)}</p>
+              <InviteShare name={circle.name} code={circle.code} showOpen={false} />
+            </section>
+          )}
+
           {round && (
             <section className="rounded-[var(--radius-card)] bg-raised p-4">
               <p className="label">{t.word.thisRound}</p>
@@ -143,13 +159,13 @@ export function CircleScreen({ code, deviceId }: { code: string; deviceId: strin
             </section>
           )}
 
-          <ConfirmReceived circle={data} deviceId={deviceId} onChange={put} />
+          <ConfirmReceived circle={data} deviceId={deviceId} onChange={put} overdue={overdue} />
 
           <section className="mt-5">
             <p className="label mb-2">{t.word.members}</p>
             <div className="rounded-[var(--radius-card)] bg-surface divide-y divide-hairline overflow-hidden">
               {members.map((member) => (
-                <MemberRow key={member.id} member={member} />
+                <MemberRow key={member.id} member={member} overdue={overdue} />
               ))}
             </div>
           </section>

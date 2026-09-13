@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CircleScreen } from './CircleScreen'
+import { CreateCircle } from './CreateCircle'
 import { Home } from './Home'
+import { JoinCircle } from './JoinCircle'
 import { Lab } from './Lab'
 import { PhoneTest } from './PhoneTest'
 import { ConnectingToWallet, OutsideNimiqPay, WaitingForNetwork } from './states'
-import { devIdentity, hostIdentity, impersonating, seedNames } from '../lib/identity'
+import { devBypass, devIdentity, hostIdentity, impersonating, seedNames } from '../lib/identity'
 import { I18nProvider } from '../lib/I18nProvider'
 import { messagesFor, sessionLang } from '../lib/i18n'
 import { deeplink } from '../lib/links'
@@ -18,8 +20,13 @@ const qc = new QueryClient({
 
 const params = new URLSearchParams(location.search)
 
-/** No router yet: ?code= opens a circle, anything else is home. */
+/**
+ * No router yet, just the query string: ?create, ?join (the deeplink carries
+ * ?join=CODE), ?code= for a circle, and home for anything else.
+ */
 const code = params.get('code')?.toUpperCase() ?? null
+const route = params.has('create') ? 'create' : params.has('join') ? 'join' : code ? 'circle' : 'home'
+const joinCode = params.get('join') || null
 const showLab = import.meta.env.DEV && params.has('lab')
 /** The close-out's phone test. Outside the gate on purpose: it has to report a failing init() too. */
 const showProbe = params.has('probe')
@@ -40,7 +47,7 @@ const LATE_HOST_WINDOW_MS = 3_000
 const LATE_HOST_POLL_MS = 100
 
 /** Dev only: drive the app from a desktop browser, where there is no wallet to gate on. */
-const bypassWallet = import.meta.env.DEV && (impersonating() !== null || params.has('browser'))
+const bypassWallet = devBypass()
 
 type Gate =
   | { kind: 'outside' }
@@ -156,7 +163,15 @@ function Gated() {
 
   return (
     <QueryClientProvider client={qc}>
-      {code ? <CircleScreen code={code} deviceId={gate.deviceId} /> : <Home deviceId={gate.deviceId} />}
+      {route === 'create' ? (
+        <CreateCircle deviceId={gate.deviceId} />
+      ) : route === 'join' ? (
+        <JoinCircle initialCode={joinCode} deviceId={gate.deviceId} />
+      ) : route === 'circle' && code ? (
+        <CircleScreen code={code} deviceId={gate.deviceId} />
+      ) : (
+        <Home deviceId={gate.deviceId} />
+      )}
       <IdentitySwitcher />
     </QueryClientProvider>
   )

@@ -4,7 +4,7 @@
  * Geometry is fixed: viewBox 0 0 200 200, outer radius 84, inner 54, one
  * segment per member, 6 degrees of gap, clockwise from 12 o'clock. Segment 1
  * is the member who is up in round 1, so the ring and the rotation order are
- * the same fact drawn two ways.
+ * the same fact shown two ways.
  *
  * Decorative in the accessibility tree (§6). Every fact it shows is also text
  * in the stat strip and the member list.
@@ -21,7 +21,7 @@ const PROUD = 6
 const GAP_DEGREES = 6
 const DOT_RADIUS = 5
 const FUTURE_STROKE = 3
-/** Never draw a hairline thinner than 1px on screen (§4). */
+/** Never render a hairline thinner than 1px on screen (§4). */
 const MIN_STROKE_PX = 1
 /** Below this the viewer's dot reads as a rendering fleck, not a marker. */
 const MIN_DOT_RADIUS_PX = 1.75

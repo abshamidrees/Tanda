@@ -62,6 +62,9 @@ export function PaySheet({
       nim: share.amountNim,
       roundNumber: round!.number,
       deviceId,
+      // Found in the walkthrough: after approving, recording can take seconds while the
+      // server checks the chain, and "Waiting for your wallet" was no longer true.
+      onRecording: () => setPhase({ kind: 'recording' }),
     })
 
     if (outcome.ok) return done(outcome.circle)

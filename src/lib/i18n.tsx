@@ -6,11 +6,11 @@
  * it is resolved once at the root and handed down through context.
  *
  * Spanish matters here beyond coverage: *tanda* is the Latin American word for
- * this whole practice. Word choices avoid anything that reads as gambling in
- * Spanish (§2): no "pozo" (as in "pozo acumulado", a lottery jackpot), no
- * "bote", no "sorteo", no "ganar".
+ * this whole practice. Word choices keep §2's rule in Spanish too: no "pozo"
+ * (its everyday sense is a numbers-game carry-over), no "bote", no "sorteo",
+ * no "ganar". The pot is "bolsa".
  */
-import { createContext, useContext } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { hostLanguage } from './nimiq'
 
 export type Lang = 'en' | 'es'
@@ -52,6 +52,7 @@ const en = ({ n, nim }: Format) => ({
 
   word: {
     pot: 'Pot',
+    share: 'Share',
     round: 'Round',
     due: 'Due',
     members: 'Members',
@@ -127,7 +128,11 @@ const en = ({ n, nim }: Format) => ({
   },
 
   closing: {
-    youPaid: 'You paid',
+    /** §8.8, told the way the wallet saw it: what left, and what was offset. */
+    youSent: 'You sent',
+    ownShare: 'Your own share',
+    ownShareNote: 'offset against your pot',
+    youContributed: 'You contributed',
     youReceived: 'You received',
     square: 'Everyone is square.',
     startAnother: 'Start another circle with the same members',
@@ -146,10 +151,92 @@ const en = ({ n, nim }: Format) => ({
     endsSquare: 'Everyone ends square.',
     create: 'Create circle',
     creating: 'Creating…',
-    shareCode: 'Share this code with the group',
-    copyInvite: 'Copy invite link',
-    openNew: 'Open the new circle',
   },
+
+  /** §8.3 */
+  create: {
+    title: 'Start a circle',
+    name: 'Circle name',
+    share: 'Share per round',
+    frequency: 'How often',
+    members: 'Members',
+    fewer: 'One fewer member',
+    more: 'One more member',
+    range: (min: number, max: number) => (
+      <>
+        {n(min)} to {n(max)} members
+      </>
+    ),
+    yourName: 'Your name',
+    yourNameHint: 'How the group will see you.',
+    needName: 'Give the circle a name.',
+    needShare: 'Enter a share above zero.',
+    needYourName: 'Add your name.',
+    submit: 'Create circle',
+    creating: 'Creating…',
+  },
+
+  /** §8.4 */
+  join: {
+    title: 'Join a circle',
+    code: 'Invite code',
+    codeHint: 'Six letters and numbers, from whoever invited you.',
+    find: 'Find circle',
+    finding: 'Looking…',
+    seats: (joined: number, total: number) => (
+      <>
+        {n(joined)} of {n(total)} joined
+      </>
+    ),
+    rotation: 'Rotation order',
+    openSeat: 'Open seat',
+    yourTurn: (round: number, total: number) => (
+      <>
+        You would be up in round {n(round)} of {n(total)}
+      </>
+    ),
+    /** When that round opens: whole periods after the circle starts, which is when it fills. */
+    when: (periods: number, frequency: 'weekly' | 'monthly'): ReactNode =>
+      periods === 0 ? (
+        'As soon as the circle starts'
+      ) : (
+        <>
+          About {n(periods)}{' '}
+          {frequency === 'weekly' ? plural(periods, 'week', 'weeks') : plural(periods, 'month', 'months')}{' '}
+          after it starts
+        </>
+      ),
+    startsWhenFull: (remaining: number): ReactNode =>
+      remaining === 1 ? (
+        'The circle starts as soon as you join.'
+      ) : (
+        <>It starts when {n(remaining)} more join, you included.</>
+      ),
+    submit: 'Join circle',
+    joining: 'Joining…',
+    another: 'Try another code',
+  },
+
+  invite: {
+    title: 'Your circle is ready',
+    label: 'Share this code with the group',
+    share: 'Share invite',
+    copy: 'Copy invite',
+    open: 'Open the circle',
+    /** The code travels as plain text too: Nimiq does not document that ?join= survives the deeplink. */
+    message: (name: string, code: string, link: string) =>
+      `Join ${name} on Tanda with code ${code}. Open it in Nimiq Pay: ${link}`,
+  },
+
+  wallet: {
+    addressTitle: 'Tanda needs your address',
+    addressLine: 'Members pay you at this address, so Nimiq Pay asks before sharing it.',
+    addressAction: 'Try again',
+  },
+
+  /** §21 data disclosure, shown where the data is first stored. */
+  disclosure:
+    'Tanda stores the circle, your name, your Nimiq address and a device identifier from Nimiq Pay. It never holds your money.',
 
   /** §11. Every state: a title, one line of explanation, an action. */
   states: {
@@ -220,6 +307,7 @@ const es = ({ n, nim }: Format): Messages => ({
 
   word: {
     pot: 'Bolsa',
+    share: 'Cuota',
     round: 'Ronda',
     due: 'Vence',
     members: 'Miembros',
@@ -294,7 +382,10 @@ const es = ({ n, nim }: Format): Messages => ({
   },
 
   closing: {
-    youPaid: 'Pagaste',
+    youSent: 'Enviaste',
+    ownShare: 'Tu propia cuota',
+    ownShareNote: 'se compensa con tu bolsa',
+    youContributed: 'Aportaste',
     youReceived: 'Recibiste',
     square: 'Todos quedan a mano.',
     startAnother: 'Empezar otro círculo con los mismos miembros',
@@ -313,10 +404,87 @@ const es = ({ n, nim }: Format): Messages => ({
     endsSquare: 'Todos terminan a mano.',
     create: 'Crear círculo',
     creating: 'Creando…',
-    shareCode: 'Comparte este código con el grupo',
-    copyInvite: 'Copiar enlace de invitación',
-    openNew: 'Abrir el nuevo círculo',
   },
+
+  create: {
+    title: 'Empezar un círculo',
+    name: 'Nombre del círculo',
+    share: 'Cuota por ronda',
+    frequency: 'Cada cuánto',
+    members: 'Miembros',
+    fewer: 'Un miembro menos',
+    more: 'Un miembro más',
+    range: (min: number, max: number) => (
+      <>
+        De {n(min)} a {n(max)} miembros
+      </>
+    ),
+    yourName: 'Tu nombre',
+    yourNameHint: 'Así te verá el grupo.',
+    needName: 'Ponle un nombre al círculo.',
+    needShare: 'Escribe una cuota mayor que cero.',
+    needYourName: 'Agrega tu nombre.',
+    submit: 'Crear círculo',
+    creating: 'Creando…',
+  },
+
+  join: {
+    title: 'Unirse a un círculo',
+    code: 'Código de invitación',
+    codeHint: 'Seis letras y números, de quien te invitó.',
+    find: 'Buscar círculo',
+    finding: 'Buscando…',
+    seats: (joined: number, total: number) => (
+      <>
+        {n(joined)} de {n(total)} ya se unieron
+      </>
+    ),
+    rotation: 'Orden de turnos',
+    openSeat: 'Lugar libre',
+    yourTurn: (round: number, total: number) => (
+      <>
+        Te tocaría en la ronda {n(round)} de {n(total)}
+      </>
+    ),
+    when: (periods: number, frequency: 'weekly' | 'monthly') =>
+      periods === 0 ? (
+        'En cuanto empiece el círculo'
+      ) : periods === 1 ? (
+        frequency === 'weekly' ? 'Una semana después de que empiece' : 'Un mes después de que empiece'
+      ) : (
+        <>
+          Unas {n(periods)} {frequency === 'weekly' ? 'semanas' : 'meses'} después de que empiece
+        </>
+      ),
+    startsWhenFull: (remaining: number) =>
+      remaining === 1 ? (
+        'El círculo empieza en cuanto te unas.'
+      ) : (
+        <>Empieza cuando se unan {n(remaining)} más, contándote a ti.</>
+      ),
+    submit: 'Unirme al círculo',
+    joining: 'Uniéndote…',
+    another: 'Probar otro código',
+  },
+
+  invite: {
+    title: 'Tu círculo está listo',
+    label: 'Comparte este código con el grupo',
+    share: 'Compartir invitación',
+    copy: 'Copiar invitación',
+    open: 'Abrir el círculo',
+    message: (name: string, code: string, link: string) =>
+      `Únete a ${name} en Tanda con el código ${code}. Ábrelo en Nimiq Pay: ${link}`,
+  },
+
+  wallet: {
+    addressTitle: 'Tanda necesita tu dirección',
+    addressLine: 'Los miembros te pagan a esta dirección, así que Nimiq Pay te pregunta antes de compartirla.',
+    addressAction: 'Reintentar',
+  },
+
+  disclosure:
+    'Tanda registra el círculo, tu nombre, tu dirección de Nimiq y un identificador de dispositivo de Nimiq Pay. Nunca guarda tu dinero.',
 
   states: {
     outside: {

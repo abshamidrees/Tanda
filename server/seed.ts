@@ -3,7 +3,7 @@
  *
  * Six members, 500 NIM weekly, rounds 1 and 2 settled, round 3 open and due in
  * two days. Round 3 deliberately carries all four member states so every chip
- * in §8.5 has something to draw:
+ * in §8.5 has something to show:
  *
  *   position 1  Amara     paid         (sent + confirmed)
  *   position 2  Beatriz   paid

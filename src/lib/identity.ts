@@ -14,9 +14,10 @@
  * flow in §8.6/§8.7 can be driven from a desktop browser — you need two
  * identities to exercise it, and one phone only gives you one.
  */
-import { deviceId as requestDeviceId } from './nimiq'
+import { listAccounts, deviceId as requestDeviceId } from './nimiq'
 
 const KEY = 'tanda.device'
+const NAME_KEY = 'tanda.name'
 
 /** Seeded members from server/seed.ts. Dev only. */
 const SEED_DEVICES: Record<string, string> = {
@@ -37,6 +38,40 @@ export function impersonating(): string | null {
   if (!import.meta.env.DEV) return null
   const who = new URLSearchParams(location.search).get('as')?.toLowerCase()
   return who && who in SEED_DEVICES ? who : null
+}
+
+/** Development only: drive the app from a desktop browser with no wallet (`?as=` or `?browser`). */
+export function devBypass(): boolean {
+  return import.meta.env.DEV && (impersonating() !== null || new URLSearchParams(location.search).has('browser'))
+}
+
+/**
+ * The address members pay this member at. Reading it is a wallet action (§10:
+ * "Joining reads your account"), so Nimiq Pay asks the user first; the first
+ * address they approve is the one used. Rejects if they decline.
+ */
+export async function walletAddress(): Promise<string> {
+  if (devBypass()) return `NQ00 ${devIdentity().slice(0, 4).toUpperCase()} 0000 0000 0000 0000 0000 0000 0000`
+  const [first] = await listAccounts()
+  if (!first) throw new Error('Nimiq Pay returned no address.')
+  return first
+}
+
+/** The name this device last joined or created a circle under, to save retyping it. */
+export function rememberedName(): string {
+  try {
+    return localStorage.getItem(NAME_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+export function rememberName(name: string) {
+  try {
+    localStorage.setItem(NAME_KEY, name.trim())
+  } catch {
+    // Storage unavailable: the name is simply asked for again next time.
+  }
 }
 
 /**

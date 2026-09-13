@@ -86,11 +86,13 @@ export async function payShare(params: {
   recipient: string
   /** The payer's address in this circle, used only to word a short balance. */
   payerAddress: string
+  /** The wallet has returned a hash and Tanda is being told. Recording can wait on the chain lookup. */
+  onRecording?: () => void
   nim: number
   roundNumber: number
   deviceId: string
 }): Promise<PayOutcome> {
-  const { code, shareId, recipient, payerAddress, nim, roundNumber, deviceId } = params
+  const { code, shareId, recipient, payerAddress, nim, roundNumber, deviceId, onRecording } = params
 
   // 1. The wallet. A cancellation arrives here as a thrown NimiqCallError —
   //    the SDK resolves its error arm rather than rejecting, and lib/nimiq.ts
@@ -113,6 +115,7 @@ export async function payShare(params: {
 
   // 2. Money has moved. From here on, losing this hash is the expensive failure.
   stashUnreported({ code, shareId, txHash })
+  onRecording?.()
 
   // 3. Tell Tanda.
   try {

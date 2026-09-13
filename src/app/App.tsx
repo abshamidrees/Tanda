@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CircleScreen } from './CircleScreen'
 import { Home } from './Home'
 import { Lab } from './Lab'
+import { PhoneTest } from './PhoneTest'
 import { ConnectingToWallet, OutsideNimiqPay, WaitingForNetwork } from './states'
 import { devIdentity, hostIdentity, impersonating, seedNames } from '../lib/identity'
 import { I18nProvider } from '../lib/I18nProvider'
@@ -20,6 +21,8 @@ const params = new URLSearchParams(location.search)
 /** No router yet: ?code= opens a circle, anything else is home. */
 const code = params.get('code')?.toUpperCase() ?? null
 const showLab = import.meta.env.DEV && params.has('lab')
+/** The close-out's phone test. Outside the gate on purpose: it has to report a failing init() too. */
+const showProbe = params.has('probe')
 const lang = sessionLang()
 
 /** §11: "Connecting to your wallet, with a retry after 8 seconds". */
@@ -54,7 +57,9 @@ function firstGate(): Gate {
 }
 
 export function App() {
-  return <I18nProvider lang={lang}>{showLab ? <Lab /> : <Gated />}</I18nProvider>
+  return (
+    <I18nProvider lang={lang}>{showLab ? <Lab /> : showProbe ? <PhoneTest /> : <Gated />}</I18nProvider>
+  )
 }
 
 /**

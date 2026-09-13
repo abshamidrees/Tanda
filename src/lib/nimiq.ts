@@ -210,3 +210,72 @@ export async function probe() {
       .sort(),
   }
 }
+
+/* ------------------------------------------------------------------------- *
+ * Phone test only (app/PhoneTest.tsx, opened with ?probe).
+ *
+ * These call the provider WITHOUT unwrap() and report exactly what came back,
+ * resolve or reject, so the real shape of a cancel, a success and a refusal can
+ * be read off a device instead of guessed. Never use them in product code: they
+ * deliberately skip the narrowing that stops a cancelled payment reading as sent.
+ * ------------------------------------------------------------------------- */
+
+export type RawCall =
+  | { method: 'listAccounts' }
+  | { method: 'sendBasicTransaction'; recipient: string; value: number }
+  | { method: 'request:getBlockNumber' }
+
+export type RawOutcome =
+  | { settled: 'no-provider'; ms: number; reason: string }
+  | { settled: 'resolved'; ms: number; value: unknown }
+  | { settled: 'rejected'; ms: number; error: unknown }
+
+export async function rawCall(call: RawCall): Promise<RawOutcome> {
+  const started = performance.now()
+  const ms = () => Math.round(performance.now() - started)
+  const state = await connect()
+  if (state.status === 'absent') return { settled: 'no-provider', ms: ms(), reason: state.reason }
+
+  const provider = state.provider
+  try {
+    const value =
+      call.method === 'listAccounts'
+        ? await provider.listAccounts()
+        : call.method === 'sendBasicTransaction'
+          ? await provider.sendBasicTransaction({ recipient: call.recipient, value: call.value })
+          : await provider.request({ method: 'getBlockNumber' })
+    return { settled: 'resolved', ms: ms(), value }
+  } catch (error) {
+    return { settled: 'rejected', ms: ms(), error }
+  }
+}
+
+/** What the host injected, read without calling anything that prompts. */
+export async function hostReport() {
+  const started = performance.now()
+  const state = await reconnect(60_000)
+  const initMs = Math.round(performance.now() - started)
+  if (state.status === 'absent') {
+    return { init: 'rejected', initMs, reason: state.reason, language: getHostLanguage() ?? null }
+  }
+  const provider = state.provider
+  const settle = async <T,>(fn: () => Promise<T>) => {
+    try {
+      return { resolved: await fn() }
+    } catch (error) {
+      return { rejected: error instanceof Error ? error.message : String(error) }
+    }
+  }
+  const rpc = provider.getRPC()
+  return {
+    init: 'resolved',
+    initMs,
+    language: getHostLanguage() ?? null,
+    network: provider.getNetwork(),
+    consensus: await settle(() => provider.isConsensusEstablished()),
+    blockNumber: await settle(() => provider.getBlockNumber()),
+    rpcInjected: rpc !== undefined,
+    rpc: rpc === undefined ? null : Object.prototype.toString.call(rpc),
+    hostContextKeys: window.nimiqPay ? Object.keys(window.nimiqPay) : null,
+  }
+}

@@ -10,7 +10,7 @@
  * in the stat strip and the member list.
  */
 
-import type { CSSProperties } from 'react'
+import { useLayoutEffect, useRef, type CSSProperties } from 'react'
 import { useI18n } from '../lib/i18n'
 
 const CENTRE = 100
@@ -55,26 +55,37 @@ function sectorPath(from: number, to: number, rInner: number, rOuter: number) {
 }
 
 /**
- * Centre content has to fit a 108px hole, and §4 and §6 cannot both hold in it:
- * §4 sets the pot at 2.5rem with a currency on every amount, but "3,000" alone
- * measures 114px at that size. The binding constraint is each text box's
- * corners staying inside the inner circle — "ROUND 3 OF 6" is 95px wide, so it
- * only clears a 54px radius within ~25px of centre, which caps the amount above
- * it near 24px. So 2.5rem is the cap, not the constant: a short pot gets the
- * full size, a longer one shrinks rather than colliding with its own ring.
+ * The centre has to clear the current turn, and the current turn sits proud:
+ * its inner edge comes 48px in, wherever in the ring it is. §6 also asks for
+ * "ROUND 3 OF 6" under the amount, but at label size that line is 95px wide,
+ * and the hole is 96px across at the proud edge, so it cannot sit under
+ * anything without touching the ring. On a real phone it did. The round is
+ * the stat strip's first figure, directly above, so the centre keeps the pot
+ * and puts its currency (§4) on the line beneath instead.
  *
- * DM Mono is monospaced, so width is exact: 0.57em advance at -0.03em tracking,
- * measured in the browser rather than assumed.
+ * 2.5rem is the cap, not the constant. A short pot gets the full size and a
+ * longer one shrinks, to the text as rendered rather than to assumed metrics:
+ * an earlier fit computed widths and forgot heights, and a one-digit pot grew
+ * into the ring. Measuring also covers a missing web font and a host that
+ * zooms text.
  */
-const INNER_WIDTH_PX = 97
-const MONO_ADVANCE = 0.57
+const CLEAR_RADIUS = R_INNER - PROUD - 4
 const POT_MAX_PX = 40
-/** "NIM" at label size, plus the gap before it. */
-const CURRENCY_ALLOWANCE_PX = 29
+const POT_MIN_PX = 12
 
-function fitPotSize(text: string) {
-  const available = INNER_WIDTH_PX - CURRENCY_ALLOWANCE_PX
-  return Math.min(POT_MAX_PX, Math.floor(available / (text.length * MONO_ADVANCE)))
+/** Whether every line's box sits inside the clear radius, corners included. */
+function centreFits(frame: HTMLElement, lines: HTMLElement) {
+  const ring = frame.getBoundingClientRect()
+  const cx = ring.left + ring.width / 2
+  const cy = ring.top + ring.height / 2
+  // viewBox units to screen px: covers any size, and a transformed parent.
+  const limit = (CLEAR_RADIUS * ring.width) / 200
+  return Array.from(lines.children).every((line) => {
+    const box = line.getBoundingClientRect()
+    const dx = Math.max(Math.abs(box.left - cx), Math.abs(box.right - cx))
+    const dy = Math.max(Math.abs(box.top - cy), Math.abs(box.bottom - cy))
+    return Math.hypot(dx, dy) <= limit
+  })
 }
 
 /**
@@ -100,7 +111,6 @@ export function Ring({
   size = 200,
   pot,
   currency,
-  roundLabel,
 }: {
   /** Members in the circle. One segment each. */
   total: number
@@ -115,12 +125,42 @@ export function Ring({
   /** Centre content. Dropped entirely below 200px (§6). */
   pot?: string
   currency?: string
-  roundLabel?: string
 }) {
   const { t } = useI18n()
+  const frameRef = useRef<HTMLDivElement>(null)
+  const linesRef = useRef<HTMLDivElement>(null)
+  const potRef = useRef<HTMLSpanElement>(null)
   const slice = 360 / total
   const span = slice - GAP_DEGREES
   const showCentre = size >= 200 && pot !== undefined
+
+  // Before paint, and again once the web fonts land: step the pot down from
+  // the cap until every line clears the ring. Set on the element directly, so
+  // a parent re-render never resets it between fits.
+  useLayoutEffect(() => {
+    const frame = frameRef.current
+    const lines = linesRef.current
+    const figure = potRef.current
+    if (!showCentre || !frame || !lines || !figure) return
+
+    const fit = () => {
+      for (let px = POT_MAX_PX; px >= POT_MIN_PX; px--) {
+        figure.style.fontSize = `${px}px`
+        if (centreFits(frame, lines)) return
+      }
+    }
+    fit()
+
+    const fonts = document.fonts
+    if (!fonts) return
+    let live = true
+    void fonts.ready.then(() => live && fit())
+    fonts.addEventListener('loadingdone', fit)
+    return () => {
+      live = false
+      fonts.removeEventListener('loadingdone', fit)
+    }
+  }, [showCentre, pot, currency, t.word.pot, size])
   const unitsPerPx = 200 / size
   const futureStroke = Math.max(FUTURE_STROKE, MIN_STROKE_PX * unitsPerPx)
   const dotRadius = Math.max(DOT_RADIUS, MIN_DOT_RADIUS_PX * unitsPerPx)
@@ -148,7 +188,7 @@ export function Ring({
   })
 
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }} aria-hidden="true">
+    <div ref={frameRef} className="relative shrink-0" style={{ width: size, height: size }} aria-hidden="true">
       <svg viewBox="0 0 200 200" width={size} height={size} role="presentation">
         {segments.map((segment) => (
           <path
@@ -187,25 +227,22 @@ export function Ring({
         )}
       </svg>
 
+      {/*
+        Three equal-height lines, so the pot's own box is centred on the ring.
+        DM Mono's ink sits mid-box at line-height 1 (measured: 0.13em above,
+        0.15em below), so the figure is optically centred too.
+      */}
       {showCentre && (
         <div
-          className="absolute left-1/2 top-1/2 flex flex-col items-center justify-center gap-0.5"
-          style={{
-            width: INNER_WIDTH_PX,
-            transform: 'translate(-50%, -50%)',
-          }}
+          ref={linesRef}
+          className="absolute left-1/2 top-1/2 flex flex-col items-center whitespace-nowrap"
+          style={{ transform: 'translate(-50%, -50%)' }}
         >
           <span className="label leading-none">{t.word.pot}</span>
-          <span className="flex items-baseline gap-1.5 leading-none">
-            <span
-              className="num tracking-pot text-cream leading-none"
-              style={{ fontSize: fitPotSize(pot!) }}
-            >
-              {pot}
-            </span>
-            {currency && <span className="label leading-none">{currency}</span>}
+          <span ref={potRef} className="num tracking-pot text-cream leading-none my-0.5">
+            {pot}
           </span>
-          {roundLabel && <span className="label leading-none">{roundLabel}</span>}
+          {currency && <span className="label leading-none">{currency}</span>}
         </div>
       )}
     </div>

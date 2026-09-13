@@ -112,7 +112,8 @@ export function PaySheet({
             <span className="text-cream">{recipient.displayName}</span>
           </Line>
           <Line k={t.pay.address}>
-            <span className="num text-body text-muted break-all text-right">{recipient.address}</span>
+            {/* Wraps between the four-character groups, never inside one: a split group misreads. */}
+            <span className="num text-body text-muted text-balance text-right">{recipient.address}</span>
           </Line>
           <Line k={t.pay.amount}>
             <span className="num text-pot tracking-pot text-cream">
@@ -174,7 +175,9 @@ function Failure({
           title={t.pay.walletTitle}
           line={t.pay.walletFailed}
           action={{ label: t.states.cancelled.action, onClick: onRetry }}
-        />
+        >
+          <p className="num text-label text-muted mt-2 break-words">{failure.detail}</p>
+        </EmptyState>
       )
     case 'rejected':
       return null

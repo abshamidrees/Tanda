@@ -64,7 +64,6 @@ function SettleDemo() {
         you={6}
         pot="3,000"
         currency="NIM"
-        roundLabel={current === null ? 'Closed' : `Round ${current} of 6`}
       />
       <button onClick={next} className="label px-3 py-2 rounded-[var(--radius-chip)] bg-raised">
         settle
@@ -165,8 +164,8 @@ export function Lab() {
 
       <Specimen title="Ring · first round, closed, and not started">
         <div className="flex flex-col items-center gap-6">
-          <Ring total={6} current={1} you={4} pot="3,000" currency="NIM" roundLabel="Round 1 of 6" />
-          <Ring total={6} current={null} you={2} pot="3,000" currency="NIM" roundLabel="Closed" />
+          <Ring total={6} current={1} you={4} pot="3,000" currency="NIM" />
+          <Ring total={6} current={null} you={2} pot="3,000" currency="NIM" />
           <Ring total={6} current={0} size={120} />
         </div>
       </Specimen>
@@ -178,8 +177,17 @@ export function Lab() {
           <Ring total={12} current={7} you={12} size={40} />
         </div>
         <div className="flex flex-wrap gap-4 justify-center mt-6">
-          <Ring total={3} current={2} you={3} pot="750" currency="NIM" roundLabel="Round 2 of 3" />
-          <Ring total={12} current={7} you={11} pot="6,000" currency="NIM" roundLabel="Round 7 of 12" />
+          <Ring total={3} current={2} you={3} pot="750" currency="NIM" />
+          <Ring total={12} current={7} you={11} pot="6,000" currency="NIM" />
+        </div>
+      </Specimen>
+
+      {/* The pot fit: every length a real circle can produce, next to the proud edge. */}
+      <Specimen title="Ring · centre fit by pot length">
+        <div className="flex flex-wrap gap-4 justify-center" data-fit-cases>
+          {['3', '1.5', '30', '750', '3,000', '12,000', '600,000', '12,000,000', '0.00003'].map((pot, i) => (
+            <Ring key={pot} total={[3, 4, 6, 12][i % 4]} current={1 + (i % 3)} you={2} pot={pot} currency="NIM" />
+          ))}
         </div>
       </Specimen>
     </main>

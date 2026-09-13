@@ -111,7 +111,6 @@ export function CircleScreen({ code, deviceId }: { code: string; deviceId: strin
               you={you?.position ?? null}
               pot={format.plain(circle.potNim)}
               currency={circle.currency}
-              roundLabel={round ? t.roundOf(round.number, round.totalRounds) : t.word.forming}
             />
           </div>
 

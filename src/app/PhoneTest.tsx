@@ -8,6 +8,7 @@
  *   3  the exact value a COMPLETED payment returns: a hash, or a serialized transaction
  *   4  the exact value a payment larger than the balance settles with
  *   5  whether the host injects an RPC URL, i.e. whether request() has an escape hatch
+ *   6  the exact call the app makes: sendBasicTransactionWithData, with a memo
  *
  * Remove once the answers are in.
  */
@@ -29,7 +30,7 @@ const AT_SCRIPT_START = {
 const SMALL_NIM = 0.01
 const HUGE_NIM = 1_000_000_000
 
-type Key = 'accounts' | 'cancel' | 'complete' | 'insufficient' | 'rpcRequest'
+type Key = 'accounts' | 'cancel' | 'complete' | 'insufficient' | 'rpcRequest' | 'withData'
 
 /** Everything about a value that could matter, including what JSON.stringify drops. */
 function describe(value: unknown): unknown {
@@ -117,6 +118,7 @@ export function PhoneTest() {
     `3 complete (${SMALL_NIM} NIM): ${json(results.complete ?? null)}`,
     `4 insufficient (${HUGE_NIM} NIM): ${json(results.insufficient ?? null)}`,
     `5 rpc request(getBlockNumber): ${json(results.rpcRequest ?? null)}`,
+    `6 the app's call, sendBasicTransactionWithData (${SMALL_NIM} NIM): ${json(results.withData ?? null)}`,
   ].join('\n\n')
 
   const step = (n: string, title: string, instruction: string, key: Key, action: () => void, label: string, needsRecipient = true) => (
@@ -213,6 +215,21 @@ export function PhoneTest() {
         () => run('rpcRequest', { method: 'request:getBlockNumber' }),
         'Call request(getBlockNumber)',
         false,
+      )}
+
+      {step(
+        '6',
+        "The app's exact call",
+        `Pays ${SMALL_NIM} NIM with a memo, exactly as Pay your share does. Approve or cancel, then read what came back.`,
+        'withData',
+        () =>
+          run('withData', {
+            method: 'sendBasicTransactionWithData',
+            recipient: recipient.trim(),
+            value: Math.round(SMALL_NIM * LUNA_PER_NIM),
+            data: 'tanda probe',
+          }),
+        'Send with a memo, as the app does',
       )}
 
       <Button

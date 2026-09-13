@@ -27,8 +27,12 @@ export type PayFailure =
   | { kind: 'cancelled' }
   /** Not enough NIM. `shortfallNim` when it could be worked out exactly. */
   | { kind: 'insufficient'; shortfallNim: number | null }
-  /** The wallet refused for some other reason. Nothing moved. */
-  | { kind: 'wallet' }
+  /**
+   * The wallet refused for a reason we do not recognise. Nothing moved.
+   * `detail` is the wallet's own words, verbatim, shown small under the
+   * message: on a real phone that is how an unrecognised refusal gets named.
+   */
+  | { kind: 'wallet'; detail: string }
   /** Money DID move; we could not tell Tanda. The hash is stashed for replay. */
   | { kind: 'unreported'; txHash: string }
   /** The server refused the hash (already paid, round settled, ...). */
@@ -43,8 +47,9 @@ export type PayOutcome =
  *
  * The SDK types the error arm as `{ type, message }` but does not enumerate the
  * `type` values, and they are not in the published reference — so this matches
- * defensively on both fields and degrades to a plain cancellation rather than
- * inventing a cause. Confirm the real strings on device and tighten this.
+ * defensively on both fields and, for anything unrecognised, shows the wallet's
+ * own words rather than inventing a cause. Confirm the real strings on device
+ * and tighten this.
  */
 function classify(error: NimiqCallError): PayFailure {
   const haystack = `${error.type} ${error.message}`.toLowerCase()
@@ -59,7 +64,18 @@ function classify(error: NimiqCallError): PayFailure {
     return { kind: 'cancelled' }
   }
 
-  return { kind: 'wallet' }
+  return { kind: 'wallet', detail: walletDetail(error) }
+}
+
+/** The raw refusal, as close to verbatim as the error preserves it. */
+function walletDetail(error: unknown): string {
+  if (error instanceof NimiqCallError) return [error.type, error.message].filter(Boolean).join(' · ')
+  if (error instanceof Error) return `${error.name}: ${error.message}`
+  try {
+    return JSON.stringify(error)
+  } catch {
+    return String(error)
+  }
 }
 
 /**
@@ -105,7 +121,9 @@ export async function payShare(params: {
       memo: `tanda ${code} r${roundNumber}`,
     })
   } catch (error) {
-    if (!(error instanceof NimiqCallError)) return { ok: false, failure: { kind: 'wallet' } }
+    if (!(error instanceof NimiqCallError)) {
+      return { ok: false, failure: { kind: 'wallet', detail: walletDetail(error) } }
+    }
     const failure = classify(error)
     if (failure.kind === 'insufficient') {
       failure.shortfallNim = await exactShortfall(payerAddress, nim, failure.shortfallNim)

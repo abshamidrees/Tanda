@@ -172,7 +172,6 @@ export function JoinCircle({ initialCode, deviceId }: { initialCode: string | nu
           you={yourSeat}
           pot={format.plain(circle.potNim)}
           currency={circle.currency}
-          roundLabel={t.word.forming}
         />
       </div>
 

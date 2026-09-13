@@ -46,14 +46,31 @@ export type ProviderState =
  * The SDK's ErrorResponse is a plain object with an `error` key, returned in
  * the RESOLVE path — not thrown. Any call that forgets to narrow will happily
  * treat `{error:{...}}` as a tx hash, so nothing calls the provider directly.
+ *
+ * Any `error` key counts, whatever is inside it. The .d.ts promises
+ * `{ type, message }` strings, but a host that sends a bare string or a code
+ * must still land on a failure, never on a hash.
  */
-function isErrorResponse(value: unknown): value is ErrorResponse {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'error' in value &&
-    typeof (value as ErrorResponse).error?.message === 'string'
-  )
+function isErrorResponse(value: unknown): value is { error: unknown } {
+  return typeof value === 'object' && value !== null && 'error' in value
+}
+
+/** Stringify anything a host might hand back, for a failure the user can read out. */
+function verbatim(value: unknown): string {
+  if (typeof value === 'string') return value
+  try {
+    return JSON.stringify(value) ?? String(value)
+  } catch {
+    return String(value)
+  }
+}
+
+function errorFields(error: unknown): { type: string; message: string } {
+  const { type, message } = (typeof error === 'object' && error !== null ? error : {}) as Partial<ErrorResponse['error']>
+  return {
+    type: typeof type === 'string' ? type : '',
+    message: typeof message === 'string' ? message : verbatim(error),
+  }
 }
 
 export class NimiqCallError extends Error {
@@ -72,9 +89,10 @@ export class NimiqCallError extends Error {
 async function unwrap<T>(method: string, call: Promise<T | ErrorResponse>): Promise<T> {
   const result = await call
   if (isErrorResponse(result)) {
-    throw new NimiqCallError(method, result.error.type, result.error.message)
+    const { type, message } = errorFields(result.error)
+    throw new NimiqCallError(method, type, message)
   }
-  return result
+  return result as T
 }
 
 let pending: Promise<ProviderState> | null = null
@@ -157,15 +175,20 @@ export async function sendShare(params: {
     throw new RangeError(`share must be a positive amount, got ${nim} NIM`)
   }
 
-  return memo
-    ? unwrap(
-        'sendBasicTransactionWithData',
-        p.sendBasicTransactionWithData({ recipient, value, data: memo, fee, validityStartHeight }),
-      )
-    : unwrap(
-        'sendBasicTransaction',
-        p.sendBasicTransaction({ recipient, value, fee, validityStartHeight }),
-      )
+  const method = memo ? 'sendBasicTransactionWithData' : 'sendBasicTransaction'
+  const result = await unwrap(
+    method,
+    memo
+      ? p.sendBasicTransactionWithData({ recipient, value, data: memo, fee, validityStartHeight })
+      : p.sendBasicTransaction({ recipient, value, fee, validityStartHeight }),
+  )
+
+  // Only a non-empty string can be a transaction. Anything else (a host that
+  // resolves null on dismiss, say) is a failure, so no row claims a payment.
+  if (typeof result !== 'string' || result.trim() === '') {
+    throw new NimiqCallError(method, 'UNEXPECTED_RESULT', verbatim(result))
+  }
+  return result
 }
 
 /** ISO 639-1 code from Nimiq Pay, seeded before page scripts run. */
@@ -223,6 +246,7 @@ export async function probe() {
 export type RawCall =
   | { method: 'listAccounts' }
   | { method: 'sendBasicTransaction'; recipient: string; value: number }
+  | { method: 'sendBasicTransactionWithData'; recipient: string; value: number; data: string }
   | { method: 'request:getBlockNumber' }
 
 export type RawOutcome =
@@ -243,7 +267,13 @@ export async function rawCall(call: RawCall): Promise<RawOutcome> {
         ? await provider.listAccounts()
         : call.method === 'sendBasicTransaction'
           ? await provider.sendBasicTransaction({ recipient: call.recipient, value: call.value })
-          : await provider.request({ method: 'getBlockNumber' })
+          : call.method === 'sendBasicTransactionWithData'
+            ? await provider.sendBasicTransactionWithData({
+                recipient: call.recipient,
+                value: call.value,
+                data: call.data,
+              })
+            : await provider.request({ method: 'getBlockNumber' })
     return { settled: 'resolved', ms: ms(), value }
   } catch (error) {
     return { settled: 'rejected', ms: ms(), error }

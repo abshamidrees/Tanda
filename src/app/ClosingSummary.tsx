@@ -37,7 +37,6 @@ export function ClosingSummary({ view, deviceId }: { view: CircleView; deviceId:
           you={you?.position ?? null}
           pot={format.plain(circle.potNim)}
           currency={circle.currency}
-          roundLabel={t.word.closed}
         />
       </div>
 

@@ -97,8 +97,8 @@ const STATES: Record<string, () => ReactNode> = {
   insufficient: () => <InSheet><InsufficientBalance shortfallNim={120} onRetry={noop} /></InSheet>,
   code: () => <CodeNotFound backHref="#" />,
   full: () => <CircleFull memberCount={6} backHref="#" />,
-  unreachable: () => <CouldNotReach onRetry={noop} />,
-  unreported: () => <InSheet><CouldNotReach layout="inline" recordedHash={'ab12'.repeat(16)} onRetry={noop} /></InSheet>,
+  unreachable: () => <CouldNotReach context="general" onRetry={noop} />,
+  unreported: () => <InSheet><CouldNotReach context="payment" layout="inline" recordedHash={'ab12'.repeat(16)} onRetry={noop} /></InSheet>,
   paid: () => (
     <InSheet>
       <AlreadyPaid confirmed={false} recipientName="Chidi" txHash={'ab12'.repeat(16)} verified />

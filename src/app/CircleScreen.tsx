@@ -62,7 +62,7 @@ export function CircleScreen({ code, deviceId }: { code: string; deviceId: strin
     if (error instanceof ApiError && CODE_ERRORS.has(error.code)) {
       return <CodeNotFound backHref={link()} />
     }
-    return <CouldNotReach onRetry={() => refetch()} />
+    return <CouldNotReach context="general" onRetry={() => refetch()} />
   }
 
   const { circle, round, members, history, you } = data

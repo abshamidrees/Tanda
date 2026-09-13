@@ -90,9 +90,10 @@ const english: Case[] = [
   },
   {
     state: 'network request fails',
-    element: <CouldNotReach onRetry={noop} />,
-    title: 'Could not reach Tanda', // §11: "Could not reach Tanda. Your payment is unaffected."
-    line: 'Your payment is unaffected.',
+    // Anywhere no payment is in flight. §11's own line is pinned to the pay sheet below.
+    element: <CouldNotReach context="general" onRetry={noop} />,
+    title: 'Could not reach Tanda',
+    line: 'Check your connection and try again.',
     action: { role: 'button', name: 'Try again' },
   },
   {
@@ -150,7 +151,7 @@ const spanish: Case[] = [
   {
     ...english[7],
     title: 'No pudimos conectar con Tanda',
-    line: 'Tu pago no se ve afectado.',
+    line: 'Revisa tu conexión e inténtalo de nuevo.',
     action: { role: 'button', name: 'Reintentar' },
   },
   {
@@ -223,11 +224,33 @@ describe('§11 details the table asks for', () => {
   })
 
   it('an unreported payment retries the record, and says the money already moved', () => {
-    renderIn('en', <CouldNotReach layout="inline" recordedHash={HASH} onRetry={noop} />)
+    renderIn('en', <CouldNotReach context="payment" layout="inline" recordedHash={HASH} onRetry={noop} />)
     expect(screen.getByText('Your payment is unaffected and will be recorded.')).toBeTruthy()
     expect(screen.getByText(`${HASH.slice(0, 16)}… saved on this device`)).toBeTruthy()
     expect(screen.getByRole('status')).toBeTruthy() // mint, not an alert: nothing went wrong with the money
   })
+
+  it.each([
+    ['en', 'Your payment is unaffected.'], // §11 verbatim
+    ['es', 'Tu pago no se ve afectado.'],
+  ] as const)('inside the pay sheet (%s), the network error keeps the §11 payment line', (lang, line) => {
+    renderIn(lang, <CouldNotReach context="payment" layout="inline" onRetry={noop} />)
+    expect(screen.getByRole('heading').nextElementSibling?.textContent).toBe(line)
+  })
+
+  it.each(['en', 'es'] as const)(
+    'anywhere else (%s), the network error never mentions a payment',
+    (lang) => {
+      for (const layout of ['page', 'inline'] as const) {
+        const { container, unmount } = renderIn(
+          lang,
+          <CouldNotReach context="general" layout={layout} onRetry={noop} />,
+        )
+        expect(container.textContent).not.toMatch(/payment|pago/i)
+        unmount()
+      }
+    },
+  )
 
   it('a sent-but-unconfirmed share says who still has to confirm', () => {
     renderIn('en', <AlreadyPaid confirmed={false} recipientName="Chidi" txHash={HASH} verified />)

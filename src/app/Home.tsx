@@ -57,6 +57,9 @@ export function Home({ deviceId }: { deviceId: string }) {
 
   const { data, error, isPending, refetch } = useQuery({
     queryKey: ['circles', deviceId],
+    // One retry, not the default three with backoff: an outage should surface
+    // in about a second, not after seven seconds of "reading".
+    retry: 1,
     queryFn: async () => {
       const views = await api.listCircles(deviceId)
       // Opening a circle from here should not wait on a second request.
@@ -73,7 +76,7 @@ export function Home({ deviceId }: { deviceId: string }) {
     )
   }
 
-  if (error) return <CouldNotReach onRetry={() => refetch()} />
+  if (error) return <CouldNotReach context="general" onRetry={() => refetch()} />
 
   if (data.length === 0) {
     return (

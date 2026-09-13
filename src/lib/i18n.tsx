@@ -191,7 +191,10 @@ const en = ({ n, nim }: Format) => ({
     },
     unreachable: {
       title: 'Could not reach Tanda',
-      line: 'Your payment is unaffected.',
+      /** Anywhere no payment is in flight: home, a circle, creating a circle. */
+      line: 'Check your connection and try again.',
+      /** §11's own line. Only inside the pay sheet, where there is a payment for it to be about. */
+      linePayment: 'Your payment is unaffected.',
       lineRecorded: 'Your payment is unaffected and will be recorded.',
       action: 'Try again',
     },
@@ -354,7 +357,8 @@ const es = ({ n, nim }: Format): Messages => ({
     },
     unreachable: {
       title: 'No pudimos conectar con Tanda',
-      line: 'Tu pago no se ve afectado.',
+      line: 'Revisa tu conexión e inténtalo de nuevo.',
+      linePayment: 'Tu pago no se ve afectado.',
       lineRecorded: 'Tu pago no se ve afectado y quedará registrado.',
       action: 'Reintentar',
     },

@@ -137,27 +137,37 @@ export function CircleFull({ memberCount, backHref }: { memberCount: number; bac
 /**
  * 8. A network request failed.
  *
+ * §11 gives this state one string, "Your payment is unaffected", but it only
+ * makes sense where a payment is in flight. So context is required, and every
+ * call site has to say which it is:
+ *
+ *   general  anywhere else — home, a circle, creating a circle. A neutral line.
+ *   payment  inside the pay sheet only, where §11's line is true and relevant.
+ *
  * With `recordedHash`, money already moved and only Tanda's record is missing:
  * the retry re-sends that hash and must never reopen the wallet, or the member
  * pays twice.
  */
-export function CouldNotReach({
-  onRetry,
-  layout = 'page',
-  recordedHash,
-}: {
-  onRetry: () => void
-  layout?: 'page' | 'inline'
-  recordedHash?: string
-}) {
+export function CouldNotReach(
+  props: { onRetry: () => void; layout?: 'page' | 'inline' } & (
+    | { context: 'general' }
+    | { context: 'payment'; recordedHash?: string }
+  ),
+) {
   const { t } = useI18n()
+  const { onRetry, layout = 'page' } = props
+  const copy = t.states.unreachable
+  const recordedHash = props.context === 'payment' ? props.recordedHash : undefined
+  const line =
+    props.context === 'general' ? copy.line : recordedHash ? copy.lineRecorded : copy.linePayment
+
   return (
     <EmptyState
       layout={layout}
       tone={recordedHash ? 'mint' : 'coral'}
-      title={t.states.unreachable.title}
-      line={recordedHash ? t.states.unreachable.lineRecorded : t.states.unreachable.line}
-      action={{ label: t.states.unreachable.action, onClick: onRetry, variant: layout === 'page' ? 'secondary' : 'primary' }}
+      title={copy.title}
+      line={line}
+      action={{ label: copy.action, onClick: onRetry, variant: layout === 'page' ? 'secondary' : 'primary' }}
     >
       {recordedHash && (
         <p className="num text-body text-muted mt-1 break-all">{t.pay.savedOnDevice(recordedHash)}</p>

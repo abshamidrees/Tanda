@@ -14,7 +14,7 @@
  * lost because a request failed.
  */
 import { NimiqCallError, lunaToNim, nimToLuna, sendShare } from './nimiq'
-import { ApiError, api, clearUnreported, stashUnreported, type Verification } from './api'
+import { api, clearUnreported, isRefusal, stashUnreported, type Verification } from './api'
 import type { CircleView } from './api'
 
 /**
@@ -120,7 +120,7 @@ export async function payShare(params: {
     clearUnreported(shareId)
     return { ok: true, txHash, circle: circle as CircleView, verification }
   } catch (error) {
-    if (error instanceof ApiError && !error.offline && error.status < 500) {
+    if (isRefusal(error)) {
       // The server actively refused it. Replaying will not help.
       clearUnreported(shareId)
       return { ok: false, failure: { kind: 'rejected', code: error.code } }

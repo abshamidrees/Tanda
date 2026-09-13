@@ -2,6 +2,7 @@
  * Typed client for Tanda's own server. Knows nothing about wallets — that is
  * lib/nimiq.ts. The two meet in lib/pay.ts.
  */
+import { isSessionOpen } from './session'
 
 export type ShareState = 'paid' | 'sent' | 'outstanding' | 'not due'
 export type RoundStatus = 'open' | 'settling' | 'settled'
@@ -105,12 +106,27 @@ export class ApiError extends Error {
     this.details = details
   }
 
+  /** We never reached Tanda. Distinct from NO_SESSION, which never tried. */
   get offline() {
-    return this.status === 0
+    return this.code === 'OFFLINE'
   }
 }
 
+/**
+ * Tanda received the request and refused it (4xx): replaying will not help.
+ * Offline, no session and 5xx are not refusals — a stashed hash must survive them.
+ */
+export function isRefusal(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status >= 400 && error.status < 500
+}
+
 async function request<T>(path: string, init: RequestInit & { deviceId?: string } = {}): Promise<T> {
+  // Before the wallet gate resolves there is no identity to act for, and
+  // outside Nimiq Pay there never will be. Nothing leaves the device.
+  if (!isSessionOpen()) {
+    throw new ApiError(0, 'NO_SESSION', 'No wallet session.')
+  }
+
   const { deviceId, ...rest } = init
 
   let response: Response
@@ -240,9 +256,7 @@ export async function flushUnreported(code: string, deviceId: string): Promise<n
       sent++
     } catch (error) {
       // Already recorded, or the round moved on: the server knows, so drop it.
-      if (error instanceof ApiError && !error.offline && error.status < 500) {
-        clearUnreported(entry.shareId)
-      }
+      if (isRefusal(error)) clearUnreported(entry.shareId)
     }
   }
   return sent

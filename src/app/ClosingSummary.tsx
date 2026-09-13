@@ -161,7 +161,7 @@ function RestartSheet({
 
             {phase.kind === 'failed' ? (
               <div className="mt-4">
-                <CouldNotReach layout="inline" onRetry={create} />
+                <CouldNotReach context="general" layout="inline" onRetry={create} />
               </div>
             ) : (
               <Button full className="mt-5" onClick={create} disabled={phase.kind === 'creating'}>

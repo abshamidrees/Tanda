@@ -10,7 +10,7 @@ import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
 import { Sheet } from '../components/Sheet'
 import { CouldNotReach, InsufficientBalance, PaymentCancelled } from './states'
-import { ApiError, api, clearUnreported, type CircleView, type ShareRow } from '../lib/api'
+import { api, clearUnreported, isRefusal, type CircleView, type ShareRow } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { payShare, type PayFailure } from '../lib/pay'
 
@@ -84,7 +84,7 @@ export function PaySheet({
       clearUnreported(share.id)
       done(next)
     } catch (error) {
-      if (error instanceof ApiError && !error.offline && error.status < 500) {
+      if (isRefusal(error)) {
         clearUnreported(share.id)
         setPhase({ kind: 'idle' })
         return onSettledElsewhere()
@@ -158,6 +158,7 @@ function Failure({
     case 'unreported':
       return (
         <CouldNotReach
+          context="payment"
           layout="inline"
           recordedHash={failure.txHash}
           onRetry={() => onRecord(failure.txHash)}

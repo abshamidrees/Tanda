@@ -5,10 +5,14 @@
  * to our origin, stable across reinstalls (§10). It identifies a device, not a
  * person, and it never authorises anything that moves money.
  *
- * Outside Nimiq Pay there is no such identifier, so dev falls back to a local
- * one. `?as=amara` selects a seeded member so the two-sided flow in §8.6/§8.7
- * can be driven from a desktop browser — you need two identities to exercise
- * it, and one phone only gives you one.
+ * Production never invents one. No identity from the host means no session,
+ * and no session means no request (lib/session.ts) — so a browser that is not
+ * Nimiq Pay has nothing to fetch for and shows only the "open in Nimiq Pay"
+ * card.
+ *
+ * In development only, `?as=amara` selects a seeded member so the two-sided
+ * flow in §8.6/§8.7 can be driven from a desktop browser — you need two
+ * identities to exercise it, and one phone only gives you one.
  */
 import { deviceId as requestDeviceId } from './nimiq'
 
@@ -28,13 +32,26 @@ export function seedNames(): string[] {
   return Object.keys(SEED_DEVICES)
 }
 
-/** The `?as=` override, if one is present and recognised. */
+/** The dev `?as=` override, if one is present and recognised. Always null in production. */
 export function impersonating(): string | null {
+  if (!import.meta.env.DEV) return null
   const who = new URLSearchParams(location.search).get('as')?.toLowerCase()
   return who && who in SEED_DEVICES ? who : null
 }
 
-function localFallback(): string {
+/**
+ * The identity Nimiq Pay issues. Rejects outside Nimiq Pay, and when the user
+ * declines the prompt; there is deliberately no fallback. `reason` is shown
+ * verbatim in the consent prompt, so it arrives localised.
+ */
+export function hostIdentity(reason: string): Promise<string> {
+  return requestDeviceId(reason)
+}
+
+/** Development only: a seeded member via `?as=`, or a stable local id for `?browser`. */
+export function devIdentity(): string {
+  if (!import.meta.env.DEV) throw new Error('Development identities do not exist in production.')
+
   const who = impersonating()
   if (who) return SEED_DEVICES[who]
 
@@ -51,23 +68,6 @@ function localFallback(): string {
   } catch {
     return '0'.repeat(64)
   }
-}
-
-let pending: Promise<string> | null = null
-
-/** `reason` is shown verbatim in Nimiq Pay's consent prompt, so it arrives localised. */
-export function deviceIdentity(reason: string): Promise<string> {
-  pending ??= (async () => {
-    // An explicit ?as= wins, so the flow stays drivable inside Pay too.
-    if (impersonating()) return localFallback()
-    try {
-      return await requestDeviceId(reason)
-    } catch {
-      // Not inside Nimiq Pay, or the user declined the prompt.
-      return localFallback()
-    }
-  })()
-  return pending
 }
 
 /** Build an in-app link, carrying the dev `?as=` identity and `?lang=` preview when set. */

@@ -18,12 +18,12 @@ Every core action is a wallet action. The app calls:
 - **`init()`** from `@nimiq/mini-app-sdk`, which gates the whole app. Outside Nimiq Pay, the only thing shown is a card with a QR code and the deeplink; nothing is fetched.
 - **`isConsensusEstablished()`**, before anything reads or writes.
 - **`listAccounts()`**, to read the address a member is paid at when they create or join a circle. Nimiq Pay asks the user first.
-- **`sendBasicTransactionWithData()`**, which opens the native send dialog, pre-filled with the recipient, the amount in Luna and a memo naming the circle and round. Amounts are integer Luna throughout.
+- **`sendBasicTransactionWithData()`**, which opens the native send dialog, pre-filled with the recipient, the amount in Luna and a memo naming the round and the share. The memo never carries the circle code, because memos are public. Amounts are integer Luna throughout.
 - **`window.nimiqPay.language`**, through the SDK's `getHostLanguage()`, to choose English or Spanish.
-- **`requestDeviceIdentifier({ reason })`**, as the device's handle in a circle. It identifies a device, not a person, and never authorises anything that moves money.
+- **`requestDeviceIdentifier({ reason })`**, as the device's handle in a circle, and to show the first-open introduction only once. It identifies a device, not a person, and never authorises anything that moves money.
 - **The deeplink** `https://nimpay.app/miniapps/open/tanda-omega-sooty.vercel.app?join=CODE` for invites. The code also travels as plain text in every invite, so a member can type it if the link does not carry it.
 
-A cancelled payment resolves with an error object rather than rejecting, so every provider call is narrowed before its result is used; a cancelled send never reaches the server. The provider has no transaction-history method, so the server checks each recorded hash against a public Nimiq indexer and marks shares it can match as verified on chain.
+A cancelled payment resolves with an error object rather than rejecting, so every provider call is narrowed before its result is used; a cancelled send never reaches the server. The provider has no transaction-history method, so the server checks each recorded hash against a public Nimiq indexer and marks shares it can match as verified on chain. Before the wallet can open a second time for the same share, the app looks on chain for a first payment it never heard back about, so a share is not paid twice.
 
 ## What Tanda does not do
 
@@ -32,7 +32,7 @@ A cancelled payment resolves with an error object rather than rejecting, so ever
 - **It never decides the order at random.** Turn order is the order members join in, fixed as each member joins and visible to every member before the first round opens. Nothing in a circle depends on randomness, deliberately, so the competition's rule against outcomes decided by randomness does not apply to it.
 - **It does not confirm on anyone's behalf.** A share verified on chain still needs the receiving member's confirmation: the chain proves a transfer happened, and only the receiver can say it counted.
 
-What it stores, to run a circle: the circle's terms, each member's display name and Nimiq address, the device identifier Nimiq Pay issues for this app, and the transaction hashes members record. It stores no keys, no balances and no personal details beyond the name a member chooses.
+What it stores, to run a circle: the circle's terms, each member's display name and Nimiq address, the device identifier Nimiq Pay issues for this app, whether that device has seen the introduction, and the transaction hashes members record. It stores no keys, no balances and no personal details beyond the name a member chooses.
 
 ## Run it yourself
 

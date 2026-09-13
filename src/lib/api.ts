@@ -193,6 +193,13 @@ export const api = {
       deviceId,
     }),
 
+  /** §8.1: whether this device has already seen the first-open cards. */
+  device: (deviceId: string) => request<{ onboarded: boolean }>('/api/device', { deviceId }),
+
+  /** §8.1: the cards were dismissed. `keepalive`, because dismissing navigates away. */
+  markOnboarded: (deviceId: string) =>
+    request<{ onboarded: boolean }>('/api/device/onboarded', { method: 'POST', deviceId, keepalive: true }),
+
   /** Every circle this device holds a seat in (§8.2). */
   listCircles: (deviceId: string) => request<CircleView[]>('/api/circles', { deviceId }),
 

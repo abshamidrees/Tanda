@@ -5,6 +5,7 @@ import { CreateCircle } from './CreateCircle'
 import { Home } from './Home'
 import { JoinCircle } from './JoinCircle'
 import { Lab } from './Lab'
+import { FirstOpen } from './Onboarding'
 import { ConnectingToWallet, OutsideNimiqPay, WaitingForNetwork } from './states'
 import { devBypass, devIdentity, hostIdentity, impersonating, seedNames } from '../lib/identity'
 import { I18nProvider } from '../lib/I18nProvider'
@@ -160,16 +161,19 @@ function Gated() {
 
   return (
     <QueryClientProvider client={qc}>
-      {route === 'create' ? (
-        <CreateCircle deviceId={gate.deviceId} />
-      ) : route === 'join' ? (
-        <JoinCircle initialCode={joinCode} deviceId={gate.deviceId} />
-      ) : route === 'circle' && code ? (
-        <CircleScreen code={code} deviceId={gate.deviceId} />
-      ) : (
-        <Home deviceId={gate.deviceId} />
-      )}
-      <IdentitySwitcher />
+      {/* §8.1: the first open shows three cards before anything else, once. */}
+      <FirstOpen deviceId={gate.deviceId} joinCode={route === 'join' ? joinCode : null}>
+        {route === 'create' ? (
+          <CreateCircle deviceId={gate.deviceId} />
+        ) : route === 'join' ? (
+          <JoinCircle initialCode={joinCode} deviceId={gate.deviceId} />
+        ) : route === 'circle' && code ? (
+          <CircleScreen code={code} deviceId={gate.deviceId} />
+        ) : (
+          <Home deviceId={gate.deviceId} />
+        )}
+        <IdentitySwitcher />
+      </FirstOpen>
     </QueryClientProvider>
   )
 }

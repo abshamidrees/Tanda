@@ -16,9 +16,11 @@ import {
   HttpError,
   confirmReceived,
   createCircle,
+  deviceState,
   findSent,
   joinCircle,
   listCircles,
+  markOnboarded,
   readCircle,
   recordSent,
 } from './service.js'
@@ -107,6 +109,14 @@ export async function handle(request: Request): Promise<Response> {
         throw new HttpError(400, 'ADDRESS_MALFORMED', 'That is not a Nimiq address.')
       }
       return json({ balance: await getBalance(address) })
+    }
+
+    // Whether this device has seen the first-open cards, and dismissing them (§8.1).
+    if (method === 'GET' && pathname === '/api/device') {
+      return json(await deviceState(requireDevice(request)))
+    }
+    if (method === 'POST' && pathname === '/api/device/onboarded') {
+      return json(await markOnboarded(requireDevice(request)))
     }
 
     // The circles this device belongs to (§8.2 home).

@@ -47,7 +47,7 @@ const en = ({ n, nim }: Format) => ({
   close: 'Close',
   copied: 'Copied',
   somethingWrong: 'Something went wrong.',
-  identityReason: 'So Tanda can remember which circles this device belongs to.',
+  identityReason: 'So Tanda can remember which circles this device belongs to, and not show the introduction twice.',
   footer: 'Tanda never holds your money. Payments go wallet to wallet through Nimiq Pay.',
 
   word: {
@@ -87,6 +87,19 @@ const en = ({ n, nim }: Format) => ({
     dueIn: (days: number) => <>Your share is due in {n(days)} days</>,
     overdue: (days: number) => <>Your share is {n(days)} {plural(days, 'day', 'days')} overdue</>,
     waiting: (count: number) => <>Waiting on {n(count)} {plural(count, 'member', 'members')}</>,
+  },
+
+  /** §8.1, first open only. The custody card is §2's sentence, verbatim. */
+  onboarding: {
+    label: 'Introduction',
+    step: (n: number, total: number) => `${n} of ${total}`,
+    ringTitle: 'Six friends. Everyone pays in.',
+    ringLine: 'One person takes the pot. The turn rotates until everyone has had one.',
+    custodyTitle: 'Tanda never holds your money.',
+    custodyLine:
+      "Every share is a direct payment from your wallet to another member's, through Nimiq Pay. Tanda is the schedule, the record and the reminder.",
+    startTitle: 'Start a circle, or join one with a code.',
+    next: 'Next',
   },
 
   circle: {
@@ -305,7 +318,7 @@ const es = ({ n, nim }: Format): Messages => ({
   close: 'Cerrar',
   copied: 'Copiado',
   somethingWrong: 'Algo salió mal.',
-  identityReason: 'Para que Tanda recuerde a qué círculos pertenece este dispositivo.',
+  identityReason: 'Para que Tanda recuerde a qué círculos pertenece este dispositivo y no muestre la introducción dos veces.',
   footer: 'Tanda nunca guarda tu dinero. Los pagos van de billetera a billetera a través de Nimiq Pay.',
 
   word: {
@@ -343,6 +356,18 @@ const es = ({ n, nim }: Format): Messages => ({
     dueIn: (days: number) => <>Tu cuota vence en {n(days)} días</>,
     overdue: (days: number) => <>Tu cuota lleva {n(days)} {plural(days, 'día', 'días')} de atraso</>,
     waiting: (count: number) => <>Esperando a {n(count)} {plural(count, 'miembro', 'miembros')}</>,
+  },
+
+  onboarding: {
+    label: 'Introducción',
+    step: (n: number, total: number) => `${n} de ${total}`,
+    ringTitle: 'Seis amigos. Todos aportan.',
+    ringLine: 'Una persona recibe la bolsa. El turno rota hasta que a todos les toque.',
+    custodyTitle: 'Tanda nunca guarda tu dinero.',
+    custodyLine:
+      'Cada cuota es un pago directo de tu billetera a la de otro miembro, a través de Nimiq Pay. Tanda es el calendario, el registro y el recordatorio.',
+    startTitle: 'Empieza un círculo o únete a uno con un código.',
+    next: 'Siguiente',
   },
 
   circle: {

@@ -127,6 +127,16 @@ export const shares = pgTable(
   ],
 )
 
+/**
+ * ADDITION to the §9 tables. §8.1 shows three cards on first open, never again
+ * once dismissed, with the flag stored against the device identifier, which
+ * §10 reserves for onboarding state. A row exists once the cards are dismissed.
+ */
+export const devices = pgTable('devices', {
+  deviceId: text('device_id').primaryKey(),
+  onboardedAt: timestamp('onboarded_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 export const circlesRelations = relations(circles, ({ many }) => ({
   members: many(members),
   rounds: many(rounds),

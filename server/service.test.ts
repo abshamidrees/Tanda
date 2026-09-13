@@ -180,3 +180,19 @@ describe('a payment recorded before the indexer had it', () => {
     expect(spy.mock.calls.length).toBe(asked + 1)
   })
 })
+
+describe('the first-open cards (§8.1)', () => {
+  it('are due on a new device, and never again once dismissed, however often that is sent', async () => {
+    const fresh = device(40)
+    expect(await service.deviceState(fresh)).toEqual({ onboarded: false })
+
+    await service.markOnboarded(fresh)
+    await service.markOnboarded(fresh)
+    expect(await service.deviceState(fresh)).toEqual({ onboarded: true })
+  })
+
+  it('are not shown to a device that already holds a seat in a circle', async () => {
+    await activeCircle()
+    expect(await service.deviceState(device(2))).toEqual({ onboarded: true })
+  })
+})

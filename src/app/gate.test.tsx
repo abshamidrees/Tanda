@@ -181,16 +181,18 @@ describe('inside Nimiq Pay, nothing is fetched until the gate resolves', () => {
 
     await app.advance(100)
     expect(app.fetchSpy).toHaveBeenCalled()
+    // The first thing asked is whether this device has seen the first-open cards (§8.1).
     const [url, init] = app.fetchSpy.mock.calls[0]
-    expect(url).toBe('/api/circles')
+    expect(url).toBe('/api/device')
     expect(new Headers(init?.headers).get('x-tanda-device')).toBe(HOST_DEVICE)
 
-    // One retry, then the designed state, within seconds rather than after a long "reading".
+    // Tanda cannot say, so the app opens rather than stalling on an introduction.
+    // Home tries once more, then shows the designed state within seconds.
     await app.advance(3_000)
     expect(app.heading()).toBe(UNREACHABLE)
     expect(app.line()).toBe('Check your connection and try again.')
     expect(app.text()).not.toMatch(/payment/i)
-    expect(app.fetchSpy).toHaveBeenCalledTimes(2)
+    expect(app.fetchSpy.mock.calls.map(([path]) => path)).toEqual(['/api/device', '/api/circles', '/api/circles'])
   })
 })
 

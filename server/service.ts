@@ -19,7 +19,7 @@ import {
   shareState,
 } from './domain.js'
 
-const { circles, members, rounds, shares } = schema
+const { circles, devices, members, rounds, shares } = schema
 
 type Db = Awaited<ReturnType<typeof db>>
 /** The transaction handle drizzle hands the callback. Writes take this, not
@@ -645,6 +645,27 @@ export async function confirmReceived(input: {
   })
 
   return readCircle(circle.code, input.deviceId)
+}
+
+/**
+ * §8.1: has this device seen the first-open cards? A device holding a seat in
+ * any circle has opened Tanda before, so it counts too, which spares members
+ * from before the cards existed.
+ */
+export async function deviceState(deviceId: string) {
+  const conn = await db()
+  const [dismissed, seat] = await Promise.all([
+    conn.query.devices.findFirst({ where: eq(devices.deviceId, deviceId) }),
+    conn.query.members.findFirst({ where: eq(members.deviceId, deviceId), columns: { id: true } }),
+  ])
+  return { onboarded: Boolean(dismissed || seat) }
+}
+
+/** §8.1: the cards were dismissed, so this device never sees them again. */
+export async function markOnboarded(deviceId: string) {
+  const conn = await db()
+  await conn.insert(devices).values({ deviceId }).onConflictDoNothing()
+  return { onboarded: true }
 }
 
 /**

@@ -30,6 +30,8 @@ export interface ShareRow {
   amount: number
   amountNim: number
   txHash: string | null
+  /** What this share's payment memo must say, so the chain can name the share. */
+  memo: string
   sentAt: string | null
   confirmedAt: string | null
   verifiedAt: string | null
@@ -202,6 +204,16 @@ export const api = {
     request<CircleView & { verification: Verification }>(
       `/api/circles/${encodeURIComponent(code)}/shares/${shareId}/sent`,
       { method: 'POST', body: JSON.stringify({ txHash }), deviceId },
+    ),
+
+  /**
+   * Was this share already paid without Tanda hearing of it? Looks on chain
+   * for its memo. Found means the server has now recorded it.
+   */
+  findSent: (code: string, shareId: string, deviceId: string) =>
+    request<({ found: true } & CircleView) | { found: false; reason: 'not_found' | 'unreachable' }>(
+      `/api/circles/${encodeURIComponent(code)}/shares/${shareId}/find`,
+      { method: 'POST', deviceId },
     ),
 
   confirmReceived: (code: string, shareId: string, deviceId: string) =>

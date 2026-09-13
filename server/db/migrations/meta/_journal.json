@@ -15,6 +15,13 @@
       "when": 1789227904348,
       "tag": "0001_unknown_dreadnoughts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789327601589,
+      "tag": "0002_share_checked_at",
+      "breakpoints": true
     }
   ]
 }

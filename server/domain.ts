@@ -31,6 +31,17 @@ export function isValidCode(raw: string): boolean {
 }
 
 /**
+ * The memo a share's payment carries, e.g. `tanda r2 3f9a1c2b`: the round, and
+ * the start of the share's own random id. It names one share and nothing else.
+ *
+ * The circle code stays off the chain. Memos are public, and a code is what
+ * lets someone look a circle up.
+ */
+export function paymentMemo(roundNumber: number, shareId: string): string {
+  return `tanda r${roundNumber} ${shareId.replace(/-/g, '').slice(0, 8).toLowerCase()}`
+}
+
+/**
  * The pot is every member's share for the round.
  *
  * NOTE — the brief states this three times (§0, §8.3): pot = members × share,

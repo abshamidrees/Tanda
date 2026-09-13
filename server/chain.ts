@@ -24,6 +24,8 @@ interface IndexedTx {
   executed: boolean
   confirmations: number
   timestamp: number
+  /** The memo, hex. Nimiq Pay writes the UTF-8 bytes of the text it was handed. */
+  data?: string | null
 }
 
 export type VerifyResult =
@@ -33,18 +35,49 @@ export type VerifyResult =
 /** Addresses compare without spacing or case. The indexer returns them spaced. */
 const canonical = (address: string) => address.replace(/\s+/g, '').toUpperCase()
 
+/** The indexer wants dashes where addresses usually carry spaces. */
+const slug = (address: string) => address.trim().toUpperCase().replace(/\s+/g, '-')
+
+/** A memo as the indexer returns it, hex, back to the text the payer's app wrote. */
+export function decodeMemo(hex: string | null | undefined): string {
+  if (!hex || !/^(?:[0-9a-fA-F]{2})+$/.test(hex)) return ''
+  const bytes = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+  return new TextDecoder().decode(bytes)
+}
+
 /**
- * Does this hash really move this amount from this payer to this recipient?
+ * Does this transaction pay this share?
  *
- * Every field is checked. A hash that exists but pays the wrong person, or the
- * right person too little, is not verification — it is the most obvious way to
- * fake a payment, so it must fail closed.
+ * The recipient and the amount must always match. Then either the memo names
+ * the share, or the sender is the address the payer joined with. The memo is
+ * the rule because of a three-phone test on mainnet: all seven payments came
+ * from a different account than the one each payer joined with, since Nimiq
+ * Pay sends from whichever account is active. The sender still counts for a
+ * payment that carries no memo of ours.
+ */
+function paysShare(tx: IndexedTx, share: { from: string; to: string; amountLuna: number; memo: string }) {
+  if (canonical(tx.receiver_address ?? '') !== canonical(share.to)) return false
+  // Overpaying a share is still paying it. Underpaying is not.
+  if (!(tx.value >= share.amountLuna)) return false
+  return decodeMemo(tx.data) === share.memo || canonical(tx.sender_address ?? '') === canonical(share.from)
+}
+
+/**
+ * Does this hash really pay this share?
+ *
+ * A hash that exists but pays the wrong person, the right person too little,
+ * or a different share is not verification. It is the most obvious way to fake
+ * a payment, so it must fail closed.
  */
 export async function verifyTransfer(params: {
   txHash: string
   from: string
   to: string
   amountLuna: number
+  /** The share's memo, from `paymentMemo`. */
+  memo: string
+  timeoutMs?: number
 }): Promise<VerifyResult> {
   if (!/^[0-9a-fA-F]{64}$/.test(params.txHash)) {
     return { verified: false, reason: 'not_found' }
@@ -53,7 +86,7 @@ export async function verifyTransfer(params: {
   let tx: IndexedTx
   try {
     const response = await fetch(`${INDEXER}/transaction/${params.txHash.toLowerCase()}`, {
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(params.timeoutMs ?? TIMEOUT_MS),
       headers: { accept: 'application/json' },
     })
     if (response.status === 404) return { verified: false, reason: 'not_found' }
@@ -69,15 +102,48 @@ export async function verifyTransfer(params: {
   if (!tx?.hash) return { verified: false, reason: 'not_found' }
   if (tx.executed === false) return { verified: false, reason: 'not_executed' }
 
-  const matches =
-    canonical(tx.sender_address) === canonical(params.from) &&
-    canonical(tx.receiver_address) === canonical(params.to) &&
-    // Overpaying a share is still paying it. Underpaying is not.
-    tx.value >= params.amountLuna
-
-  return matches
+  return paysShare(tx, params)
     ? { verified: true, confirmations: tx.confirmations ?? 0 }
     : { verified: false, reason: 'mismatch' }
+}
+
+/** A recipient's newest transactions. A share's payment is always recent. */
+const RECENT = 50
+
+export type FindResult =
+  | { found: true; txHash: string }
+  | { found: false; reason: 'not_found' | 'unreachable' }
+
+/**
+ * Find a payment of this share that Tanda was never told about: the wallet
+ * sent it, and the app lost the answer. In the same three-phone test a payer
+ * paid one share twice, 17 seconds apart, and Tanda only ever heard about the
+ * second. So before a wallet opens again for a share, and after any refusal
+ * the app cannot read, this looks for the first. It matches on the memo,
+ * which only this share's payment carries.
+ */
+export async function findPayment(params: { to: string; amountLuna: number; memo: string }): Promise<FindResult> {
+  let txs: unknown
+  try {
+    const response = await fetch(`${INDEXER}/account-transactions/${slug(params.to)}/${RECENT}`, {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { accept: 'application/json' },
+    })
+    if (!response.ok) return { found: false, reason: 'unreachable' }
+    txs = await response.json()
+  } catch {
+    return { found: false, reason: 'unreachable' }
+  }
+  if (!Array.isArray(txs)) return { found: false, reason: 'unreachable' }
+
+  const match = (txs as IndexedTx[]).find(
+    (tx) =>
+      typeof tx?.hash === 'string' &&
+      tx.executed !== false &&
+      decodeMemo(tx.data) === params.memo &&
+      paysShare(tx, { ...params, from: '' }),
+  )
+  return match ? { found: true, txHash: match.hash.toLowerCase() } : { found: false, reason: 'not_found' }
 }
 
 /**
@@ -86,10 +152,8 @@ export async function verifyTransfer(params: {
  * wallet that was just topped up.
  */
 export async function getBalance(address: string): Promise<number | null> {
-  // The indexer wants dashes where addresses usually carry spaces.
-  const slug = address.trim().toUpperCase().replace(/\s+/g, '-')
   try {
-    const response = await fetch(`${INDEXER}/account/${slug}`, {
+    const response = await fetch(`${INDEXER}/account/${slug(address)}`, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { accept: 'application/json' },
     })

@@ -2,9 +2,9 @@
  * Circle operations. No payment logic here yet — recording a transaction hash
  * and confirming receipt (§8.6, §8.7) land in a later phase.
  */
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, ne } from 'drizzle-orm'
 import { db, schema } from './db/client.js'
-import { verifyTransfer } from './chain.js'
+import { findPayment, verifyTransfer } from './chain.js'
 import {
   MAX_MEMBERS,
   MIN_MEMBERS,
@@ -13,6 +13,7 @@ import {
   isValidCode,
   lunaToNim,
   normaliseCode,
+  paymentMemo,
   potLuna,
   recipientPositionForRound,
   shareState,
@@ -26,6 +27,7 @@ type Db = Awaited<ReturnType<typeof db>>
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
 type CircleRow = typeof circles.$inferSelect
 type MemberRow = typeof members.$inferSelect
+type ShareRecord = typeof shares.$inferSelect
 
 export class HttpError extends Error {
   readonly status: number
@@ -277,8 +279,19 @@ export async function readCircle(rawCode: string, deviceId: string | null) {
   const current = allRounds.find((r) => r.status !== 'settled') ?? null
   const settled = allRounds.filter((r) => r.status === 'settled')
 
+  // Addresses, hashes and rounds are for the people in the circle. Anyone else
+  // holding the code gets what §8.4 needs to decide on joining: the terms and,
+  // while seats are open, the rotation by name. A code travels further than
+  // the invite it came in, and until this change it was written on chain.
+  const outsider = you === null
+  const listed = outsider && circle.status !== 'forming' ? [] : roster
+
+  if (!outsider && current) await recheckPayments(conn, current, byId)
+
   const brief = (m: MemberRow | undefined) =>
-    m ? { id: m.id, position: m.position, displayName: m.displayName, address: m.address } : null
+    m
+      ? { id: m.id, position: m.position, displayName: m.displayName, address: outsider ? '' : m.address }
+      : null
 
   return {
     circle: {
@@ -306,14 +319,14 @@ export async function readCircle(rawCode: string, deviceId: string | null) {
           totals: totalsFor(you.id, allRounds),
         }
       : null,
-    members: roster.map((m) => {
-      const share = current?.shares.find((s) => s.payerMemberId === m.id)
-      const isUp = current?.recipientMemberId === m.id
+    members: listed.map((m) => {
+      const share = outsider ? undefined : current?.shares.find((s) => s.payerMemberId === m.id)
+      const isUp = !outsider && current?.recipientMemberId === m.id
       return {
         id: m.id,
         position: m.position,
         displayName: m.displayName,
-        address: m.address,
+        address: outsider ? '' : m.address,
         isYou: you?.id === m.id,
         isUp,
         shareId: share?.id ?? null,
@@ -322,7 +335,7 @@ export async function readCircle(rawCode: string, deviceId: string | null) {
         state: share ? shareState({ ...share, isRecipient: isUp }) : ('not due' as const),
       }
     }),
-    round: current
+    round: current && !outsider
       ? {
           id: current.id,
           number: current.number,
@@ -344,6 +357,8 @@ export async function readCircle(rawCode: string, deviceId: string | null) {
               amount: s.amount,
               amountNim: lunaToNim(s.amount),
               txHash: s.txHash,
+              /** What the payment's memo must say, so the chain can name this share. */
+              memo: paymentMemo(current.number, s.id),
               sentAt: s.sentAt,
               confirmedAt: s.confirmedAt,
               verifiedAt: s.verifiedAt,
@@ -356,7 +371,7 @@ export async function readCircle(rawCode: string, deviceId: string | null) {
             .sort((a, b) => (a.payer?.position ?? 0) - (b.payer?.position ?? 0)),
         }
       : null,
-    history: settled.map((r) => ({
+    history: (outsider ? [] : settled).map((r) => ({
       number: r.number,
       recipient: brief(byId.get(r.recipientMemberId)),
       pot,
@@ -364,6 +379,86 @@ export async function readCircle(rawCode: string, deviceId: string | null) {
       settledAt: r.settledAt,
     })),
   }
+}
+
+/** How often an unverified payment is looked up again, and for how long (§8.7). */
+const RECHECK_EVERY_MS = 20_000
+const RECHECK_WITHIN_MS = 60 * 60_000
+/** A read waits this long at most; the label can arrive with the next read. */
+const RECHECK_TIMEOUT_MS = 2_500
+
+/**
+ * A payment is recorded the moment the wallet answers, which is usually before
+ * the indexer has it, so the first check says not found. Measured: TEST 2's
+ * first payment verifies now, and was recorded unverified. So while a round is
+ * open, members' reads look again at recent unverified payments, throttled per
+ * share. Updates the rows passed in, so the view built from them is current.
+ */
+async function recheckPayments(
+  conn: Db,
+  round: { number: number; recipientMemberId: string; shares: ShareRecord[] },
+  byId: Map<string, MemberRow>,
+) {
+  const recipient = byId.get(round.recipientMemberId)
+  if (!recipient) return
+  const now = Date.now()
+
+  const due = round.shares.filter(
+    (s) =>
+      s.txHash &&
+      !s.verifiedAt &&
+      s.sentAt &&
+      now - s.sentAt.getTime() < RECHECK_WITHIN_MS &&
+      (!s.checkedAt || now - s.checkedAt.getTime() >= RECHECK_EVERY_MS),
+  )
+
+  await Promise.all(
+    due.map(async (s) => {
+      const check = await verifyTransfer({
+        txHash: s.txHash!,
+        from: byId.get(s.payerMemberId)?.address ?? '',
+        to: recipient.address,
+        amountLuna: s.amount,
+        memo: paymentMemo(round.number, s.id),
+        timeoutMs: RECHECK_TIMEOUT_MS,
+      })
+      const checkedAt = new Date()
+      await conn
+        .update(shares)
+        .set(check.verified ? { checkedAt, verifiedAt: checkedAt } : { checkedAt })
+        .where(eq(shares.id, s.id))
+      s.checkedAt = checkedAt
+      if (check.verified) s.verifiedAt = checkedAt
+    }),
+  )
+}
+
+/** One payment settles one share. Recording its hash against a second would count it twice. */
+async function assertHashUnused(conn: Db, txHash: string, shareId: string) {
+  const other = await conn.query.shares.findFirst({
+    where: and(eq(shares.txHash, txHash), ne(shares.id, shareId)),
+  })
+  if (other) {
+    throw new HttpError(409, 'TX_HASH_USED', 'That payment is already recorded for another share.')
+  }
+}
+
+/** Mark a share sent and move the round on, in one transaction. */
+async function markSent(
+  conn: Db,
+  circle: CircleRow,
+  share: { id: string; roundId: string },
+  txHash: string,
+  verified: boolean,
+) {
+  const now = new Date()
+  await conn.transaction(async (tx) => {
+    await tx
+      .update(shares)
+      .set({ txHash, sentAt: now, verifiedAt: verified ? now : null, checkedAt: now })
+      .where(eq(shares.id, share.id))
+    await advance(tx, circle, share.roundId)
+  })
 }
 
 /**
@@ -461,31 +556,57 @@ export async function recordSent(input: {
     throw new HttpError(400, 'TX_HASH_MALFORMED', 'That is not a transaction hash.')
   }
 
-  // Verified before the write, so a hash that does not match this payer, this
-  // recipient and this amount is never stored as verified. A failure here is
-  // not a failed payment; the share is simply recorded unverified.
+  const txHash = input.txHash.toLowerCase()
+  await assertHashUnused(conn, txHash, share.id)
+
+  // Verified before the write, so a hash that does not pay this share is never
+  // stored as verified. Not found is not a failed payment: the indexer is
+  // usually a few seconds behind, so the share is recorded unverified and
+  // looked up again on later reads.
   const check = await verifyTransfer({
-    txHash: input.txHash,
+    txHash,
     from: share.payer.address,
     to: recipient.address,
     amountLuna: share.amount,
+    memo: paymentMemo(share.round.number, share.id),
   })
 
-  await conn.transaction(async (tx) => {
-    await tx
-      .update(shares)
-      .set({
-        txHash: input.txHash.toLowerCase(),
-        sentAt: new Date(),
-        verifiedAt: check.verified ? new Date() : null,
-      })
-      .where(eq(shares.id, share.id))
-
-    await advance(tx, circle, share.roundId)
-  })
+  await markSent(conn, circle, share, txHash, check.verified)
 
   const view = await readCircle(circle.code, input.deviceId)
   return { ...view, verification: check }
+}
+
+/**
+ * The payer's app asks whether this share was already paid without Tanda
+ * hearing of it (see `findPayment` in chain.ts). A payment found here matched
+ * the share's memo, the recipient and the amount on chain, so it is recorded
+ * as sent and verified. The receiver still confirms it, as with any other.
+ */
+export async function findSent(input: { code: string; shareId: string; deviceId: string }) {
+  const conn = await db()
+  const { circle, share, recipient } = await loadShare(conn, input.code, input.shareId)
+
+  if (share.payer.deviceId !== input.deviceId) {
+    throw new HttpError(403, 'NOT_YOUR_SHARE', 'Only the payer can look for their own payment.')
+  }
+  if (share.txHash || share.confirmedAt) {
+    return { found: true as const, ...(await readCircle(circle.code, input.deviceId)) }
+  }
+  if (share.round.status === 'settled') {
+    throw new HttpError(409, 'ROUND_SETTLED', 'This round has already settled.')
+  }
+
+  const result = await findPayment({
+    to: recipient.address,
+    amountLuna: share.amount,
+    memo: paymentMemo(share.round.number, share.id),
+  })
+  if (!result.found) return { found: false as const, reason: result.reason }
+
+  await assertHashUnused(conn, result.txHash, share.id)
+  await markSent(conn, circle, share, result.txHash, true)
+  return { found: true as const, ...(await readCircle(circle.code, input.deviceId)) }
 }
 
 /**

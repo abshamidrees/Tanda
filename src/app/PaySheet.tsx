@@ -17,6 +17,7 @@ import { payShare, type PayFailure } from '../lib/pay'
 type Phase =
   | { kind: 'idle' }
   | { kind: 'waiting' }
+  | { kind: 'checking' }
   | { kind: 'recording' }
   | { kind: 'failed'; failure: PayFailure }
 
@@ -59,12 +60,13 @@ export function PaySheet({
       shareId: share.id,
       recipient: recipient!.address,
       payerAddress: share.payer?.address ?? '',
+      memo: share.memo,
       nim: share.amountNim,
-      roundNumber: round!.number,
       deviceId,
       // Found in the walkthrough: after approving, recording can take seconds while the
       // server checks the chain, and "Waiting for your wallet" was no longer true.
       onRecording: () => setPhase({ kind: 'recording' }),
+      onChecking: () => setPhase({ kind: 'checking' }),
     })
 
     if (outcome.ok) return done(outcome.circle)
@@ -77,7 +79,7 @@ export function PaySheet({
 
   /**
    * Money already moved; only Tanda's record is missing. Retrying re-sends the
-   * hash we stashed. It must never go back through the wallet — that would open
+   * hash we stashed. It must never go back through the wallet: that would open
    * a second send dialog for a share that is already paid.
    */
   async function recordAgain(txHash: string) {
@@ -131,9 +133,11 @@ export function PaySheet({
           <Button full className="mt-4" onClick={pay} disabled={phase.kind !== 'idle'}>
             {phase.kind === 'waiting'
               ? t.pay.working
-              : phase.kind === 'recording'
-                ? t.pay.recording
-                : t.pay.action}
+              : phase.kind === 'checking'
+                ? t.pay.checking
+                : phase.kind === 'recording'
+                  ? t.pay.recording
+                  : t.pay.action}
           </Button>
         )}
 

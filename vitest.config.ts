@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.{ts,tsx}'],
+    // Server tests declare the node environment in their own first line.
+    include: ['src/**/*.test.{ts,tsx}', 'server/**/*.test.ts'],
   },
 })

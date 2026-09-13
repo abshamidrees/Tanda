@@ -12,7 +12,8 @@ import * as schema from './schema.js'
 
 export type Db = PostgresJsDatabase<typeof schema>
 
-const LOCAL_DATA_DIR = './.pglite'
+/** Server tests point this at `memory://`, so they never touch the dev database. */
+const LOCAL_DATA_DIR = process.env.TANDA_PGLITE_DIR ?? './.pglite'
 /**
  * Resolved from this file, not the working directory: a deployed function's
  * cwd is not guaranteed to be the project root, but its migrations always ship

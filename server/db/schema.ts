@@ -113,6 +113,13 @@ export const shares = pgTable(
      * transfer happened, not that the circle agrees it counted.
      */
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    /**
+     * When the indexer was last asked about `tx_hash`. A payment is recorded
+     * the moment the wallet answers, usually before the indexer has it, so an
+     * unverified share is asked about again on later reads, no more often
+     * than this allows.
+     */
+    checkedAt: timestamp('checked_at', { withTimezone: true }),
   },
   (t) => [
     uniqueIndex('shares_round_payer_key').on(t.roundId, t.payerMemberId),

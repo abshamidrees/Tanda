@@ -14,6 +14,7 @@ import {
   HttpError,
   confirmReceived,
   createCircle,
+  findSent,
   joinCircle,
   listCircles,
   readCircle,
@@ -85,6 +86,7 @@ const CIRCLE = new RegExp(`^/api/circles/(${CODE})$`)
 const JOIN = new RegExp(`^/api/circles/(${CODE})/join$`)
 const SENT = new RegExp(`^/api/circles/(${CODE})/shares/(${ID})/sent$`)
 const CONFIRM = new RegExp(`^/api/circles/(${CODE})/shares/(${ID})/confirm$`)
+const FIND = new RegExp(`^/api/circles/(${CODE})/shares/(${ID})/find$`)
 
 export async function handle(request: Request): Promise<Response> {
   const { pathname } = new URL(request.url)
@@ -142,6 +144,14 @@ export async function handle(request: Request): Promise<Response> {
       const deviceId = requireDevice(request)
       const { txHash } = sentSchema.parse(await request.json())
       return json(await recordSent({ code: sent[1], shareId: sent[2], txHash, deviceId }))
+    }
+
+    // The payer asks whether this share was already paid without Tanda hearing
+    // of it, before a wallet opens again for it (§8.6).
+    const finding = FIND.exec(pathname)
+    if (finding && method === 'POST') {
+      const deviceId = requireDevice(request)
+      return json(await findSent({ code: finding[1], shareId: finding[2], deviceId }))
     }
 
     // The receiver signs off that it arrived (§8.7). Settles the round when it

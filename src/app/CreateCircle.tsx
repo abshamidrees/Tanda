@@ -15,11 +15,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
+import { Back } from './Back'
 import { InviteShare } from './InviteShare'
 import { CouldNotReach } from './states'
 import { api } from '../lib/api'
 import { useI18n } from '../lib/i18n'
-import { link, rememberName, rememberedName, walletAddress } from '../lib/identity'
+import { rememberName, rememberedName, walletAddress } from '../lib/identity'
 
 const MIN_MEMBERS = 3
 const MAX_MEMBERS = 12
@@ -94,9 +95,7 @@ export function CreateCircle({ deviceId }: { deviceId: string }) {
   if (phase.kind === 'created') {
     return (
       <Shell>
-        <a href={link()} className="label inline-block mb-3 hover:text-cream">
-          &larr; {t.word.circles}
-        </a>
+        <Back />
         <h1 className="text-title tracking-title mb-5">{t.invite.title}</h1>
         <InviteShare name={phase.name} code={phase.code} />
       </Shell>
@@ -107,9 +106,7 @@ export function CreateCircle({ deviceId }: { deviceId: string }) {
 
   return (
     <Shell>
-      <a href={link()} className="label inline-block mb-3 hover:text-cream">
-        &larr; {t.word.circles}
-      </a>
+      <Back />
       <h1 className="text-title tracking-title">{t.create.title}</h1>
 
       <form className="mt-5 flex flex-col gap-5" onSubmit={submit} noValidate>

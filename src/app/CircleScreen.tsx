@@ -9,6 +9,7 @@ import { Button } from '../components/Button'
 import { MemberRow } from '../components/MemberRow'
 import { Ring } from '../components/Ring'
 import { StatStrip } from '../components/StatStrip'
+import { Back } from './Back'
 import { ClosingSummary } from './ClosingSummary'
 import { ConfirmReceived } from './ConfirmReceived'
 import { InviteShare } from './InviteShare'
@@ -81,9 +82,7 @@ export function CircleScreen({ code, deviceId }: { code: string; deviceId: strin
   return (
     <Shell>
       <header>
-        <a href={link()} className="label inline-block mb-3 hover:text-cream">
-          &larr; {t.word.circles}
-        </a>
+        <Back />
         <h1 className="text-title tracking-title">{circle.name}</h1>
       </header>
 

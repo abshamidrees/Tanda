@@ -17,6 +17,7 @@ import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
 import { Ring } from '../components/Ring'
 import { StatStrip } from '../components/StatStrip'
+import { Back } from './Back'
 import { CircleFull, CouldNotReach } from './states'
 import { ApiError, api, type CircleView } from '../lib/api'
 import { useI18n } from '../lib/i18n'
@@ -251,15 +252,6 @@ export function JoinCircle({ initialCode, deviceId }: { initialCode: string | nu
         </button>
       </div>
     </Shell>
-  )
-}
-
-function Back() {
-  const { t } = useI18n()
-  return (
-    <a href={link()} className="label inline-block mb-3 hover:text-cream">
-      &larr; {t.word.circles}
-    </a>
   )
 }
 
